@@ -1,0 +1,192 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# IDE - IntelliJ IDEA / PyCharm
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# IDE - VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/
+
+# IDE - Other
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# OS - macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# OS - Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# OS - Linux
+*~
+.directory
+.Trash-*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Python Virtual environments
+venv/
+ENV/
+env/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Python Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+nosetests.xml
+coverage.xml
+*.cover
+
+# Python Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+
+# Node.js / Frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-debug.log*
+.npm
+.yarn/
+dist/
+dist-ssr/
+*.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# Docker
+.dockerignore
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+*.tfvars
+!terraform.tfvars.example
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# AWS
+.aws/
+
+# Secrets
+secrets/
+*.pem
+*.key
+*.crt
+
+# Build artifacts
+build/
+dist/
+target/
+*.class
+*.jar
+*.war
+
+# Cache
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+.vuepress/dist/
+
+# Cursor IDE
+.cursorindexingignore
+.specstory/
+
+# Misc
+*.orig
+.sass-cache/
+connect.lock
+typings/
+.npm
+.eslintcache
+.stylelintcache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
