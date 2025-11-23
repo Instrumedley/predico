@@ -22,6 +22,7 @@ class User(Base):
     email_verification_token = Column(String, nullable=True, unique=True, index=True)
     password_reset_token = Column(String, nullable=True, unique=True, index=True)
     password_reset_expires = Column(DateTime, nullable=True)
+    cognito_user_id = Column(String, nullable=True, unique=True, index=True)  # AWS Cognito user ID
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

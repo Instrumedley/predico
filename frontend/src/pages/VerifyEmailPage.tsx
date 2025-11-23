@@ -28,7 +28,7 @@ export const VerifyEmailPage: React.FC = () => {
 
   const verifyEmail = async (token: string) => {
     try {
-      const response = await apiClient.post('/auth/verify-email', { token })
+      const response = await apiClient.post('/api/v1/auth/verify-email', { token })
       setStatus('success')
       setMessage(response.data.message || 'Email verified successfully!')
       setTimeout(() => {
@@ -49,7 +49,7 @@ export const VerifyEmailPage: React.FC = () => {
     }
 
     try {
-      await apiClient.post('/auth/resend-verification', { email })
+      await apiClient.post('/api/v1/auth/resend-verification', { email })
       setMessage('Verification email sent! Please check your inbox.')
     } catch (error: any) {
       setMessage(

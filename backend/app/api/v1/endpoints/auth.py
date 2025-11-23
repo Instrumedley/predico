@@ -27,6 +27,7 @@ from app.core.security import get_password_hash, verify_password, create_access_
 from app.core.config import settings
 from app.services.email_service import email_service
 from app.services.token_service import TokenService
+from app.services.cognito_service import cognito_service
 
 router = APIRouter()
 
@@ -56,22 +57,46 @@ async def signup(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
             detail="Username already taken"
         )
     
-    # Create new user
+    # Create user in Cognito if enabled
+    cognito_user_id = None
+    if settings.COGNITO_ENABLED:
+        try:
+            cognito_result = await cognito_service.sign_up(
+                email=user_data.email,
+                password=user_data.password,
+                username=user_data.username,
+            )
+            cognito_user_id = cognito_result.get("sub")
+            # If Cognito handles email verification, user is already confirmed
+            email_verified = cognito_result.get("user_confirmed", False)
+        except ValueError as e:
+            # Cognito validation error (e.g., password policy, duplicate email)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e)
+            )
+    else:
+        email_verified = False
+    
+    # Create user in our database
+    # We still store password hash for local auth fallback and consistency
     hashed_password = get_password_hash(user_data.password)
     new_user = User(
         email=user_data.email,
         username=user_data.username,
         hashed_password=hashed_password,
-        email_verified=False,
+        email_verified=email_verified,
+        cognito_user_id=cognito_user_id,  # Store Cognito user ID if available
     )
     
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
     
-    # Generate verification token and send email
-    verification_token = await TokenService.create_verification_token(new_user.id, db)
-    email_service.send_verification_email(new_user.email, verification_token)
+    # Generate verification token and send email (if not using Cognito email verification)
+    if not settings.COGNITO_ENABLED or not email_verified:
+        verification_token = await TokenService.create_verification_token(new_user.id, db)
+        email_service.send_verification_email(new_user.email, verification_token)
     
     return SignupResponse(
         user=UserResponse.model_validate(new_user),
@@ -83,23 +108,52 @@ async def signup(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
 async def login(credentials: LoginRequest, db: AsyncSession = Depends(get_db)):
     """
     Authenticate user and return access token.
+    
+    If Cognito is enabled, authenticates with Cognito first, then looks up user in database.
+    If Cognito is disabled, uses local password verification.
     """
-    # Find user by email
-    result = await db.execute(select(User).where(User.email == credentials.email))
-    user = result.scalar_one_or_none()
-    
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password"
-        )
-    
-    # Verify password
-    if not verify_password(credentials.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password"
-        )
+    # Authenticate with Cognito if enabled
+    if settings.COGNITO_ENABLED:
+        try:
+            # Authenticate with Cognito
+            cognito_tokens = await cognito_service.authenticate(
+                email=credentials.email,
+                password=credentials.password,
+            )
+            
+            # Find user in database by email or cognito_user_id
+            # Note: We could also decode the Cognito ID token to get the sub
+            result = await db.execute(select(User).where(User.email == credentials.email))
+            user = result.scalar_one_or_none()
+            
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="User not found in database"
+                )
+        except ValueError as e:
+            # Cognito authentication failed
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=str(e)
+            )
+    else:
+        # Local authentication
+        result = await db.execute(select(User).where(User.email == credentials.email))
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password"
+            )
+        
+        # Verify password
+        if not verify_password(credentials.password, user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password"
+            )
     
     # Check if user is active
     if not user.is_active:
@@ -108,7 +162,7 @@ async def login(credentials: LoginRequest, db: AsyncSession = Depends(get_db)):
             detail="User account is inactive"
         )
     
-    # Create access token
+    # Create access token (our JWT for API authentication)
     access_token = create_access_token(
         data={"sub": str(user.id), "email": user.email}
     )

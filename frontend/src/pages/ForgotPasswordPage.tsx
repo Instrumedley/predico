@@ -26,7 +26,7 @@ export const ForgotPasswordPage: React.FC = () => {
   const onSubmit = async (data: ForgotPasswordFormData) => {
     try {
       setError('')
-      await apiClient.post('/auth/forgot-password', { email: data.email })
+      await apiClient.post('/api/v1/auth/forgot-password', { email: data.email })
       setSuccess(true)
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to send reset email. Please try again.')
