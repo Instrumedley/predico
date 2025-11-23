@@ -1,0 +1,44 @@
+#!/bin/sh
+
+# Pre-push hook to prevent direct pushes to main branch
+# This hook runs locally before a push is sent to the remote
+
+# Get the branch being pushed
+branch=$(git symbolic-ref --short HEAD 2>/dev/null)
+
+# If we can't determine the branch, allow the push (safety fallback)
+if [ -z "$branch" ]; then
+  exit 0
+fi
+
+# Check if pushing to main branch
+if [ "$branch" = "main" ]; then
+  echo ""
+  echo "❌ =========================================="
+  echo "   DIRECT PUSH TO MAIN BRANCH BLOCKED!"
+  echo "=========================================="
+  echo ""
+  echo "Direct pushes to the 'main' branch are not allowed."
+  echo "Please use the following workflow:"
+  echo ""
+  echo "1. Create a feature branch:"
+  echo "   git checkout -b feature/your-feature-name"
+  echo ""
+  echo "2. Make your changes and commit:"
+  echo "   git add ."
+  echo "   git commit -m 'feat: your changes'"
+  echo ""
+  echo "3. Push the feature branch:"
+  echo "   git push origin feature/your-feature-name"
+  echo ""
+  echo "4. Create a Pull Request on GitHub"
+  echo "5. After review, merge the PR (this will deploy to dev)"
+  echo ""
+  echo "=========================================="
+  echo ""
+  exit 1
+fi
+
+# Allow push for all other branches
+exit 0
+

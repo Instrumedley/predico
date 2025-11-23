@@ -177,6 +177,9 @@ target/
 .cursorindexingignore
 .specstory/
 
+# Git hooks (local only, not tracked)
+# .git/hooks/ is automatically ignored
+
 # Git Hooks
 .husky/_/
 
