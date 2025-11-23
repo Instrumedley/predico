@@ -1,0 +1,48 @@
+#!/bin/sh
+
+# Pre-push hook to prevent direct pushes to main branch
+# This hook runs locally before a push is sent to the remote
+# It checks the REMOTE branch being pushed to, not the local branch
+
+# Read the refs being pushed from stdin
+# Format: <local ref> <local sha1> <remote ref> <remote sha1>
+while read local_ref local_sha remote_ref remote_sha
+do
+  # Skip if remote_ref is empty (deletion)
+  if [ -z "$remote_ref" ]; then
+    continue
+  fi
+  
+  # Check if pushing to main branch on remote
+  # remote_ref format: refs/heads/main
+  if [ "$remote_ref" = "refs/heads/main" ]; then
+    echo ""
+    echo "❌ =========================================="
+    echo "   DIRECT PUSH TO MAIN BRANCH BLOCKED!"
+    echo "=========================================="
+    echo ""
+    echo "Direct pushes to the 'main' branch on remote are not allowed."
+    echo "You can push from your local 'main' to a different remote branch."
+    echo ""
+    echo "Please use one of these workflows:"
+    echo ""
+    echo "Option 1: Push to a feature branch (recommended)"
+    echo "   git push origin main:feature/your-feature-name"
+    echo "   Then create a Pull Request from feature/your-feature-name to main"
+    echo ""
+    echo "Option 2: Create a feature branch first"
+    echo "   git checkout -b feature/your-feature-name"
+    echo "   git push origin feature/your-feature-name"
+    echo "   Then create a Pull Request on GitHub"
+    echo ""
+    echo "After review, merge the PR (this will deploy to dev)"
+    echo ""
+    echo "=========================================="
+    echo ""
+    exit 1
+  fi
+done
+
+# Allow push if not pushing to main
+exit 0
+

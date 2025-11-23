@@ -4,7 +4,8 @@
   "private": true,
   "description": "World Cup prediction platform",
   "scripts": {
-    "prepare": "husky install",
+    "prepare": "husky install && npm run setup-git-hooks",
+    "setup-git-hooks": "cp .githooks/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push || echo 'Git hooks directory not found - run this after git clone'",
     "commit": "git-cz"
   },
   "devDependencies": {

@@ -23359,3 +23359,655 @@ The check is now active. Direct pushes to main will be blocked, while PR merges 
 
 ---
 
+_**User (2025-11-23 06:29Z)**_
+
+I tried to push directly to main and it works, so your added code on the ci/cd workflow did not have any effect
+
+---
+
+_**Agent (model default, mode Agent)**_
+
+
+
+---
+
+
+GitHub Actions can't prevent a push; it only runs after the push. The workflow will fail, but the push still succeeds. Improving the check and adding a post-push revert step:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/rafael/PycharmProjects/predico/.github/workflows/ci-cd.yml</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="codebase_search">
+<details>
+                <summary>Tool use: **codebase_search** • Searched codebase "How to prevent direct pushes to main branch using GitHub Actions or webhooks" • **15** results</summary>
+            
+| File | Lines |
+|------|-------|
+| `BRANCH_STRATEGY.md` | L69 |
+| `infrastructure/STEP_BY_STEP_SETUP.md` | L179-270 |
+| `.github/workflows/ci-cd.yml` | L79-123 |
+| `.github/workflows/ci-cd.yml` | L118-155 |
+| `.github/workflows/ci-cd.yml` | L205-263 |
+| `GIT_HOOKS_SETUP.md` | L97 |
+| `.github/workflows/ci-cd.yml` | L153-208 |
+| `.github/workflows/ci-cd.yml` | L261-309 |
+| `.github/workflows/ci-cd.yml` | L84 |
+| `BRANCH_STRATEGY.md` | L65-69 |
+| `infrastructure/STEP_BY_STEP_SETUP.md` | L267-358 |
+| `infrastructure/START_HERE.md` | L112-154 |
+| `infrastructure/AWS_SETUP_GUIDE.md` | L129-215 |
+| `package.json` | L24 |
+| `infrastructure/terraform/envs/README.md` | L59 |
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+GitHub Actions can't prevent a push; it only runs after the push. The workflow can fail, but the push still succeeds. Improving detection and adding a post-push revert step:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **code_edit** • Edit file: /Users/rafael/PycharmProjects/predico/.github/workflows/ci-cd.yml</summary>
+
+**Chunk 1**
+Lines added: 8, lines removed: undefined
+
+```diff
+@@ -25,4 +25,12 @@
+      if: github.event_name == &#39;push&#39;
+      steps:
++       - name: Debug - Show push information
++         run: |
++           echo &quot;Branch: ${{ github.ref }}&quot;
++           echo &quot;Event: ${{ github.event_name }}&quot;
++           echo &quot;Actor: ${{ github.actor }}&quot;
++           echo &quot;Commit message: ${{ github.event.head_commit.message }}&quot;
++           echo &quot;Commit author: ${{ github.event.head_commit.author.name }}&quot;
++       
+        - name: Check if direct push to main
+          id: check-push
+```
+
+**Chunk 2**
+Lines added: 8, lines removed: 2
+
+```diff
+@@ -35,8 +43,14 @@
+            fi
+            
+-           # Check if commit message indicates a PR merge
+-           if echo &quot;${{ github.event.head_commit.message }}&quot; | grep -q &quot;^Merge pull request&quot;; then
++           # Check if commit message indicates a PR merge (GitHub&#39;s merge commit format)
++           COMMIT_MSG=&quot;${{ github.event.head_commit.message }}&quot;
++           echo &quot;Checking commit message: $COMMIT_MSG&quot;
++           
++           if echo &quot;$COMMIT_MSG&quot; | grep -qE &quot;^Merge pull request|^Merge branch|^Merge.*into main&quot;; then
+              echo &quot;is_direct_push=false&quot; &gt;&gt; $GITHUB_OUTPUT
+              echo &quot;✅ This is a PR merge - allowing&quot;
++           elif [[ &quot;${{ github.event.head_commit.author.name }}&quot; == &quot;GitHub&quot; ]]; then
++             echo &quot;is_direct_push=false&quot; &gt;&gt; $GITHUB_OUTPUT
++             echo &quot;✅ Commit by GitHub (likely PR merge) - allowing&quot;
+            else
+              echo &quot;is_direct_push=true&quot; &gt;&gt; $GITHUB_OUTPUT
+```
+
+**Chunk 3**
+Lines added: 20, lines removed: 3
+
+```diff
+@@ -47,13 +61,30 @@
+          if: steps.check-push.outputs.is_direct_push == &#39;true&#39;
+          run: |
+-           echo &quot;::error::Direct pushes to main branch are not allowed!&quot;
+-           echo &quot;Please create a pull request instead.&quot;
++           echo &quot;::error::🚫 DIRECT PUSH TO MAIN BLOCKED!&quot;
++           echo &quot;&quot;
++           echo &quot;Direct pushes to main branch are not allowed!&quot;
++           echo &quot;The push succeeded, but this workflow will fail to prevent deployment.&quot;
+            echo &quot;&quot;
+-           echo &quot;Workflow:&quot;
++           echo &quot;Please follow this workflow:&quot;
+            echo &quot;1. Create a feature branch: git checkout -b feature/your-feature&quot;
+            echo &quot;2. Push your changes: git push origin feature/your-feature&quot;
+            echo &quot;3. Create a pull request to main on GitHub&quot;
+            echo &quot;4. After review and approval, merge the PR&quot;
++           echo &quot;&quot;
++           echo &quot;⚠️  Note: You may want to revert this commit manually.&quot;
+            exit 1
++       
++       - name: Revert direct push to main (Optional - commented out)
++         if: steps.check-push.outputs.is_direct_push == &#39;true&#39; &amp;&amp; false
++         env:
++           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
++         run: |
++           echo &quot;⚠️  This would revert the commit, but it&#39;s disabled for safety&quot;
++           echo &quot;Uncomment this step in the workflow if you want auto-revert&quot;
++           # git config --global user.name &quot;github-actions[bot]&quot;
++           # git config --global user.email &quot;github-actions[bot]@users.noreply.github.com&quot;
++           # git checkout main
++           # git revert HEAD --no-edit
++           # git push origin main
+  
+    test:
+```
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+
+Improved detection, but there’s a limitation: GitHub Actions can’t prevent a push; it only runs after the push. The workflow can fail, but the push still succeeds.
+
+## What the workflow does
+
+1. The push succeeds (GitHub Actions can’t block it)
+2. The workflow runs and detects a direct push
+3. The workflow fails, which:
+   - Prevents deployment (build/deploy jobs won’t run)
+   - Shows a clear error in GitHub Actions
+   - Marks the commit with a failed status
+
+## To verify it’s working
+
+1. Check GitHub Actions after your push
+2. You should see the `check-branch-protection` job fail
+3. The deployment should be blocked
+
+## Alternatives on the free plan
+
+### Option 1: Use a local git hook (prevents push before it happens)
+Create `.git/hooks/pre-push`:
+
+```bash
+#!/bin/sh
+branch=$(git symbolic-ref --short HEAD)
+if [ "$branch" = "main" ]; then
+  echo "❌ Direct pushes to main are not allowed!"
+  echo "Please create a pull request instead."
+  exit 1
+fi
+exit 0
+```
+
+Make it executable: `chmod +x .git/hooks/pre-push`
+
+### Option 2: Document and rely on discipline
+- Document the policy in README
+- Use the workflow as a safety net (fails loudly)
+
+### Option 3: Upgrade to GitHub Pro ($4/month)
+- Full branch protection with approvals
+- Can actually block pushes
+
+## Recommendation
+
+1. Add the local git hook (prevents the push locally)
+2. Keep the workflow (fails if someone bypasses the hook)
+3. Document the policy
+
+Should I create the local git hook file? It will prevent you from pushing to main from your local machine.
+
+---
+
+_**User (2025-11-23 06:29Z)**_
+
+let's try the option 1 instead of doing post-push fixes and ammendments. The local git hook pre-check should be a more effective way
+
+---
+
+_**Agent (model default, mode Agent)**_
+
+
+
+---
+
+
+Creating a local git pre-push hook to block direct pushes to main:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="write">
+
+<details><summary>Tool use: **code_edit** • Edit file: /Users/rafael/PycharmProjects/predico/.git/hooks/pre-push</summary>
+
+**Chunk 1**
+Lines added: 44, lines removed: 1
+
+```diff
+@@ -1,1 +1,44 @@
+- 
++ #!/bin/sh
++ 
++ # Pre-push hook to prevent direct pushes to main branch
++ # This hook runs locally before a push is sent to the remote
++ 
++ # Get the branch being pushed
++ branch=$(git symbolic-ref --short HEAD 2&gt;/dev/null)
++ 
++ # If we can&#39;t determine the branch, allow the push (safety fallback)
++ if [ -z &quot;$branch&quot; ]; then
++   exit 0
++ fi
++ 
++ # Check if pushing to main branch
++ if [ &quot;$branch&quot; = &quot;main&quot; ]; then
++   echo &quot;&quot;
++   echo &quot;❌ ==========================================&quot;
++   echo &quot;   DIRECT PUSH TO MAIN BRANCH BLOCKED!&quot;
++   echo &quot;==========================================&quot;
++   echo &quot;&quot;
++   echo &quot;Direct pushes to the &#39;main&#39; branch are not allowed.&quot;
++   echo &quot;Please use the following workflow:&quot;
++   echo &quot;&quot;
++   echo &quot;1. Create a feature branch:&quot;
++   echo &quot;   git checkout -b feature/your-feature-name&quot;
++   echo &quot;&quot;
++   echo &quot;2. Make your changes and commit:&quot;
++   echo &quot;   git add .&quot;
++   echo &quot;   git commit -m &#39;feat: your changes&#39;&quot;
++   echo &quot;&quot;
++   echo &quot;3. Push the feature branch:&quot;
++   echo &quot;   git push origin feature/your-feature-name&quot;
++   echo &quot;&quot;
++   echo &quot;4. Create a Pull Request on GitHub&quot;
++   echo &quot;5. After review, merge the PR (this will deploy to dev)&quot;
++   echo &quot;&quot;
++   echo &quot;==========================================&quot;
++   echo &quot;&quot;
++   exit 1
++ fi
++ 
++ # Allow push for all other branches
++ exit 0
++ 
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **command** • Run command: chmod +x /Users/rafael/PycharmProjects/predico/.git/hooks/pre-push</summary>
+
+```bash
+chmod +x /Users/rafael/PycharmProjects/predico/.git/hooks/pre-push
+```
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="write">
+
+<details><summary>Tool use: **code_edit** • Edit file: /Users/rafael/PycharmProjects/predico/.githooks/README.md</summary>
+
+**Chunk 1**
+Lines added: 70, lines removed: 1
+
+```diff
+@@ -1,1 +1,70 @@
+- 
++ # Git Hooks
++ 
++ This repository uses git hooks to enforce development workflows.
++ 
++ ## Pre-Push Hook
++ 
++ The &#96;.git/hooks/pre-push&#96; hook prevents direct pushes to the &#96;main&#96; branch.
++ 
++ ### What It Does
++ 
++ - ✅ **Blocks** direct pushes to &#96;main&#96; branch
++ - ✅ **Allows** pushes to all other branches (feature branches, staging, production, etc.)
++ - ✅ **Allows** PR merges (GitHub merges happen server-side, so the hook doesn&#39;t run)
++ 
++ ### How It Works
++ 
++ When you try to push to &#96;main&#96;:
++ &#96;&#96;&#96;bash
++ git push origin main
++ &#96;&#96;&#96;
++ 
++ The hook will:
++ 1. Detect you&#39;re on the &#96;main&#96; branch
++ 2. Block the push with a helpful error message
++ 3. Show you the correct workflow
++ 
++ ### Setting Up (For New Clones)
++ 
++ If someone clones the repository, they need to set up the hook:
++ 
++ &#96;&#96;&#96;bash
++ # The hook is in .git/hooks/ which is not tracked by git
++ # So you need to manually copy it or use a tool like husky
++ 
++ # Option 1: Manual copy (if the hook file exists in repo)
++ cp .githooks/pre-push .git/hooks/pre-push
++ chmod +x .git/hooks/pre-push
++ 
++ # Option 2: Use husky (if installed)
++ npm run prepare  # This sets up all hooks
++ &#96;&#96;&#96;
++ 
++ ### Bypassing (Not Recommended)
++ 
++ If you absolutely need to bypass (emergency only):
++ 
++ &#96;&#96;&#96;bash
++ git push origin main --no-verify
++ &#96;&#96;&#96;
++ 
++ ⚠️ **Warning**: Only use in emergencies. The hook is there for a reason!
++ 
++ ### Testing
++ 
++ Try pushing to main to test:
++ &#96;&#96;&#96;bash
++ git checkout main
++ # Make a small change
++ git commit --allow-empty -m &quot;test: testing pre-push hook&quot;
++ git push origin main  # Should be blocked
++ &#96;&#96;&#96;
++ 
++ ### For Team Members
++ 
++ When setting up the project:
++ 1. Clone the repository
++ 2. Copy the hook: &#96;cp .githooks/pre-push .git/hooks/pre-push&#96;
++ 3. Make it executable: &#96;chmod +x .git/hooks/pre-push&#96;
++ 4. Or run &#96;npm run prepare&#96; if husky is set up
++ 
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **command** • Run command: mkdir -p /Users/rafael/PycharmProjects/predico/.githooks && cp /Users/rafael/PycharmProjects/predico/.git/hooks/pre-push /Users/rafael/PycharmProjects/predico/.githooks/pre-push</summary>
+
+```bash
+mkdir -p /Users/rafael/PycharmProjects/predico/.githooks && cp /Users/rafael/PycharmProjects/predico/.git/hooks/pre-push /Users/rafael/PycharmProjects/predico/.githooks/pre-push
+```
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/rafael/PycharmProjects/predico/.gitignore</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **code_edit** • Edit file: /Users/rafael/PycharmProjects/predico/.gitignore</summary>
+
+**Chunk 1**
+Lines added: 3, lines removed: undefined
+
+```diff
+@@ -177,4 +177,7 @@
+  .cursorindexingignore
+  .specstory/
++ 
++ # Git hooks (local only, not tracked)
++ # .git/hooks/ is automatically ignored
+  
+  # Git Hooks
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **command** • Run command: cd /Users/rafael/PycharmProjects/predico && git add .githooks/ && git status --short</summary>
+
+```bash
+cd /Users/rafael/PycharmProjects/predico && git add .githooks/ && git status --short
+```
+
+```
+A  .githooks/README.md
+A  .githooks/pre-push
+ M .github/workflows/ci-cd.yml
+ M .gitignore
+ M .specstory/history/2025-11-22_20-18Z-setting-up-a-scalable-prediction-website.md
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Updating package.json to include a setup script for team members:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/rafael/PycharmProjects/predico/package.json</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **code_edit** • Edit file: /Users/rafael/PycharmProjects/predico/package.json</summary>
+
+**Chunk 1**
+Lines added: 2, lines removed: 1
+
+```diff
+@@ -5,5 +5,6 @@
+    &quot;description&quot;: &quot;World Cup prediction platform&quot;,
+    &quot;scripts&quot;: {
+-     &quot;prepare&quot;: &quot;husky install&quot;,
++     &quot;prepare&quot;: &quot;husky install &amp;&amp; npm run setup-git-hooks&quot;,
++     &quot;setup-git-hooks&quot;: &quot;cp .githooks/pre-push .git/hooks/pre-push &amp;&amp; chmod +x .git/hooks/pre-push || echo &#39;Git hooks directory not found - run this after git clone&#39;&quot;,
+      &quot;commit&quot;: &quot;git-cz&quot;
+    },
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **command** • Run command: cd /Users/rafael/PycharmProjects/predico && git checkout main 2>/dev/null || echo "Already on main or branch doesn't exist"</summary>
+
+```bash
+cd /Users/rafael/PycharmProjects/predico && git checkout main 2>/dev/null || echo "Already on main or branch doesn't exist"
+```
+
+```
+A	.githooks/README.md
+A	.githooks/pre-push
+M	.github/workflows/ci-cd.yml
+M	.gitignore
+M	.specstory/history/2025-11-22_20-18Z-setting-up-a-scalable-prediction-website.md
+M	package.json
+Your branch is up to date with &#39;origin/main&#39;.
+
+```
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **command** • Run command: cd /Users/rafael/PycharmProjects/predico && git log --oneline -1</summary>
+
+```bash
+cd /Users/rafael/PycharmProjects/predico && git log --oneline -1
+```
+
+```
+d2b8d66 adding block in ci to not allow direct pushes to main since github is greedy and wants me to pay for teams plan in order to have that. Fuck you github
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Pre-push hook is set up. Summary:
+
+## What was created
+
+1. **`.git/hooks/pre-push`** — Active hook that blocks direct pushes to main
+2. **`.githooks/pre-push`** — Copy stored in the repo for team members
+3. **`.githooks/README.md`** — Documentation for the hook
+4. **Updated `package.json`** — Added `setup-git-hooks` script
+
+## How it works
+
+When you try to push directly to main:
+```bash
+git push origin main
+```
+
+The hook will:
+- Block the push before it reaches GitHub
+- Show an error message with instructions
+- Allow pushes to all other branches
+
+## Test it
+
+Try pushing to main to verify it's working:
+
+```bash
+# Make a test commit (empty commit for testing)
+git commit --allow-empty -m "test: testing pre-push hook"
+
+# Try to push - should be blocked
+git push origin main
+```
+
+You should see the error message and the push will be rejected.
+
+## For team members
+
+When someone clones the repo, they can set up the hook by running:
+```bash
+npm install  # This runs the "prepare" script automatically
+# OR manually:
+npm run setup-git-hooks
+```
+
+## Important notes
+
+- PR merges on GitHub are allowed (they happen server-side, so the hook doesn't run)
+- The hook only blocks local direct pushes
+- You can bypass with `--no-verify` (not recommended)
+
+The hook is active. Try pushing to main to confirm it blocks the push.
+
+---
+
+_**User (2025-11-23 06:29Z)**_
+
+ok, I can see that this actually worked to not allow direct pushes to main. However, even though I m working in local branch called 'main', I used my PyCharm IDE to push to a different branch other than 'main' (create upon push), and even the push to that remote branch was also blocked:
+
+
+
+==========================================
+
+
+
+18:19:14.643: [predico] git -c credential.helper= -c core.quotepath=false -c log.showSignature=false push --progress --porcelain origin refs/heads/main:reinforcement-pr-main
+
+error: failed to push some refs to 'github-personal:Instrumedley/predico.git'
+
+❌ ==========================================
+
+   DIRECT PUSH TO MAIN BRANCH BLOCKED!
+
+==========================================
+
+Direct pushes to the 'main' branch are not allowed.
+
+Please use the following workflow:
+
+1. Create a feature branch:
+
+   git checkout -b feature/your-feature-name
+
+2. Make your changes and commit:
+
+   git add .
+
+   git commit -m 'feat: your changes'
+
+3. Push the feature branch:
+
+   git push origin feature/your-feature-name
+
+4. Create a Pull Request on GitHub
+
+5. After review, merge the PR (this will deploy to dev)
+
+==========================================
+
+
+
+
+
+I want the block to only happen if the branch in question is 'main' on remote, but it should be okay to work directly in local main and from there push to a different branch name on remote
+
+---
+
+_**Agent (model default, mode Agent)**_
+
+
+
+---
+

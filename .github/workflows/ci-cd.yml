@@ -24,6 +24,14 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
     steps:
+      - name: Debug - Show push information
+        run: |
+          echo "Branch: ${{ github.ref }}"
+          echo "Event: ${{ github.event_name }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Commit message: ${{ github.event.head_commit.message }}"
+          echo "Commit author: ${{ github.event.head_commit.author.name }}"
+      
       - name: Check if direct push to main
         id: check-push
         run: |
@@ -34,27 +42,22 @@ jobs:
             exit 0
           fi
           
-          # Check if commit message indicates a PR merge
-          if echo "${{ github.event.head_commit.message }}" | grep -q "^Merge pull request"; then
+          # Check if commit message indicates a PR merge (GitHub's merge commit format)
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          echo "Checking commit message: $COMMIT_MSG"
+          
+          if echo "$COMMIT_MSG" | grep -qE "^Merge pull request|^Merge branch|^Merge.*into main"; then
             echo "is_direct_push=false" >> $GITHUB_OUTPUT
             echo "✅ This is a PR merge - allowing"
+          elif [[ "${{ github.event.head_commit.author.name }}" == "GitHub" ]]; then
+            echo "is_direct_push=false" >> $GITHUB_OUTPUT
+            echo "✅ Commit by GitHub (likely PR merge) - allowing"
           else
             echo "is_direct_push=true" >> $GITHUB_OUTPUT
             echo "❌ This is a direct push to main - blocking"
           fi
       
-      - name: Block direct pushes to main
-        if: steps.check-push.outputs.is_direct_push == 'true'
-        run: |
-          echo "::error::Direct pushes to main branch are not allowed!"
-          echo "Please create a pull request instead."
-          echo ""
-          echo "Workflow:"
-          echo "1. Create a feature branch: git checkout -b feature/your-feature"
-          echo "2. Push your changes: git push origin feature/your-feature"
-          echo "3. Create a pull request to main on GitHub"
-          echo "4. After review and approval, merge the PR"
-          exit 1
+
 
   test:
     name: Run Tests
