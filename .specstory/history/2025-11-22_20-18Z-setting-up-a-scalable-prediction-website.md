@@ -23953,3 +23953,61 @@ The hook is active. Try pushing to main to confirm it blocks the push.
 
 ---
 
+_**User (2025-11-23 06:29Z)**_
+
+ok, I can see that this actually worked to not allow direct pushes to main. However, even though I m working in local branch called 'main', I used my PyCharm IDE to push to a different branch other than 'main' (create upon push), and even the push to that remote branch was also blocked:
+
+
+
+==========================================
+
+
+
+18:19:14.643: [predico] git -c credential.helper= -c core.quotepath=false -c log.showSignature=false push --progress --porcelain origin refs/heads/main:reinforcement-pr-main
+
+error: failed to push some refs to 'github-personal:Instrumedley/predico.git'
+
+❌ ==========================================
+
+   DIRECT PUSH TO MAIN BRANCH BLOCKED!
+
+==========================================
+
+Direct pushes to the 'main' branch are not allowed.
+
+Please use the following workflow:
+
+1. Create a feature branch:
+
+   git checkout -b feature/your-feature-name
+
+2. Make your changes and commit:
+
+   git add .
+
+   git commit -m 'feat: your changes'
+
+3. Push the feature branch:
+
+   git push origin feature/your-feature-name
+
+4. Create a Pull Request on GitHub
+
+5. After review, merge the PR (this will deploy to dev)
+
+==========================================
+
+
+
+
+
+I want the block to only happen if the branch in question is 'main' on remote, but it should be okay to work directly in local main and from there push to a different branch name on remote
+
+---
+
+_**Agent (model default, mode Agent)**_
+
+
+
+---
+

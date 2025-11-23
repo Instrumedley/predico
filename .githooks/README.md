@@ -8,21 +8,33 @@ The `.git/hooks/pre-push` hook prevents direct pushes to the `main` branch.
 
 ### What It Does
 
-- ✅ **Blocks** direct pushes to `main` branch
-- ✅ **Allows** pushes to all other branches (feature branches, staging, production, etc.)
+- ✅ **Blocks** direct pushes to `main` branch on remote
+- ✅ **Allows** pushing from local `main` to a different remote branch (e.g., `git push origin main:feature-branch`)
+- ✅ **Allows** pushes to all other remote branches (feature branches, staging, production, etc.)
 - ✅ **Allows** PR merges (GitHub merges happen server-side, so the hook doesn't run)
 
 ### How It Works
 
-When you try to push to `main`:
+The hook checks the **remote branch** being pushed to, not your local branch.
+
+**Blocked:**
 ```bash
-git push origin main
+git push origin main  # Pushes local main → remote main ❌
+```
+
+**Allowed:**
+```bash
+# Push from local main to a different remote branch ✅
+git push origin main:feature-branch-name
+
+# Push from any local branch to non-main remote branch ✅
+git push origin feature-branch:feature-branch
 ```
 
 The hook will:
-1. Detect you're on the `main` branch
-2. Block the push with a helpful error message
-3. Show you the correct workflow
+1. Check what remote branch you're pushing to
+2. Block if it's `main` on remote
+3. Allow if it's any other remote branch
 
 ### Setting Up (For New Clones)
 
