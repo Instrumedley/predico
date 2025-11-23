@@ -6,15 +6,17 @@ on:
       - main
       - develop
       - staging
+      - production
   pull_request:
     branches:
       - main
       - develop
       - staging
+      - production
 
 env:
   AWS_REGION: eu-north-1  # Stockholm, Sweden
-  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
+  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-north-1.amazonaws.com
 
 jobs:
   test:
@@ -90,7 +92,7 @@ jobs:
     name: Build and Push Docker Images
     needs: test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/main')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production')
     
     steps:
       - uses: actions/checkout@v4
@@ -109,8 +111,8 @@ jobs:
       - name: Determine environment
         id: env
         run: |
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "environment=prod" >> $GITHUB_OUTPUT
+          if [[ "${{ github.ref }}" == "refs/heads/production" ]]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
           elif [[ "${{ github.ref }}" == "refs/heads/staging" ]]; then
             echo "environment=staging" >> $GITHUB_OUTPUT
           else
@@ -147,7 +149,7 @@ jobs:
     name: Deploy to Dev
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
     environment: dev
     
     steps:
@@ -182,17 +184,17 @@ jobs:
       
       - name: Update ECS Service
         env:
-          ENV: ${{ steps.env.outputs.environment }}
+          ENV: dev
         run: |
           aws ecs update-service \
-            --cluster predico-${ENV}-cluster \
-            --service predico-${ENV}-backend-service \
+            --cluster predico-dev-cluster \
+            --service predico-dev-backend-service \
             --force-new-deployment \
             --region ${{ env.AWS_REGION }} || echo "Backend service update skipped"
           
           aws ecs update-service \
-            --cluster predico-${ENV}-cluster \
-            --service predico-${ENV}-frontend-service \
+            --cluster predico-dev-cluster \
+            --service predico-dev-frontend-service \
             --force-new-deployment \
             --region ${{ env.AWS_REGION }} || echo "Frontend service update skipped"
 
@@ -235,17 +237,17 @@ jobs:
       
       - name: Update ECS Service
         env:
-          ENV: ${{ steps.env.outputs.environment }}
+          ENV: staging
         run: |
           aws ecs update-service \
-            --cluster predico-${ENV}-cluster \
-            --service predico-${ENV}-backend-service \
+            --cluster predico-staging-cluster \
+            --service predico-staging-backend-service \
             --force-new-deployment \
             --region ${{ env.AWS_REGION }} || echo "Backend service update skipped"
           
           aws ecs update-service \
-            --cluster predico-${ENV}-cluster \
-            --service predico-${ENV}-frontend-service \
+            --cluster predico-staging-cluster \
+            --service predico-staging-frontend-service \
             --force-new-deployment \
             --region ${{ env.AWS_REGION }} || echo "Frontend service update skipped"
 
@@ -253,7 +255,7 @@ jobs:
     name: Deploy to Production
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/production'
     environment: 
       name: production
       url: https://yourdomain.com  # Update with your domain
@@ -290,17 +292,17 @@ jobs:
       
       - name: Update ECS Service
         env:
-          ENV: ${{ steps.env.outputs.environment }}
+          ENV: production
         run: |
           aws ecs update-service \
-            --cluster predico-${ENV}-cluster \
-            --service predico-${ENV}-backend-service \
+            --cluster predico-production-cluster \
+            --service predico-production-backend-service \
             --force-new-deployment \
             --region ${{ env.AWS_REGION }} || echo "Backend service update skipped"
           
           aws ecs update-service \
-            --cluster predico-${ENV}-cluster \
-            --service predico-${ENV}-frontend-service \
+            --cluster predico-production-cluster \
+            --service predico-production-frontend-service \
             --force-new-deployment \
             --region ${{ env.AWS_REGION }} || echo "Frontend service update skipped"
 
