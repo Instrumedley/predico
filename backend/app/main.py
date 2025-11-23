@@ -33,9 +33,24 @@ app = FastAPI(
 )
 
 # CORS middleware
+# Ensure CORS_ORIGINS is a list
+cors_origins = settings.CORS_ORIGINS
+if isinstance(cors_origins, str):
+    import json
+    try:
+        cors_origins = json.loads(cors_origins)
+    except json.JSONDecodeError:
+        cors_origins = [origin.strip() for origin in cors_origins.split(',') if origin.strip()]
+
+# Debug: Log CORS origins (remove in production)
+if settings.DEBUG:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"CORS Origins configured: {cors_origins}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

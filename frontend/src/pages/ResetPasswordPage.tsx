@@ -54,7 +54,7 @@ export const ResetPasswordPage: React.FC = () => {
 
     try {
       setError('')
-      await apiClient.post('/auth/reset-password', {
+      await apiClient.post('/api/v1/auth/reset-password', {
         token,
         new_password: data.new_password,
       })
