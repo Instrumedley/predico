@@ -1,0 +1,7 @@
+{
+  "command": "",
+  "serverUrl": "",
+  "authenticateProxy": false,
+  "autoDetectDevServer": true,
+  "commitMode": "commits"
+}

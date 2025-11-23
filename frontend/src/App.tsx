@@ -2,15 +2,14 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
-
-// Pages (will be created later)
-// import HomePage from '@/pages/HomePage'
-// import LoginPage from '@/pages/LoginPage'
-// import SignupPage from '@/pages/SignupPage'
-// import DashboardPage from '@/pages/DashboardPage'
-// import PredictionsPage from '@/pages/PredictionsPage'
-// import LeaguesPage from '@/pages/LeaguesPage'
-// import LeaderboardPage from '@/pages/LeaderboardPage'
+import {
+  HomePage,
+  LoginPage,
+  SignupPage,
+  VerifyEmailPage,
+  ForgotPasswordPage,
+  ResetPasswordPage,
+} from '@/pages'
 
 function App() {
   return (
@@ -18,9 +17,12 @@ function App() {
       <AuthProvider>
         <Routes>
           {/* Public routes */}
-          {/* <Route path="/" element={<HomePage />} /> */}
-          {/* <Route path="/login" element={<LoginPage />} /> */}
-          {/* <Route path="/signup" element={<SignupPage />} /> */}
+          <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           
           {/* Protected routes */}
           {/* <Route
@@ -28,30 +30,6 @@ function App() {
             element={
               <ProtectedRoute>
                 <DashboardPage />
-              </ProtectedRoute>
-            }
-          /> */}
-          {/* <Route
-            path="/predictions"
-            element={
-              <ProtectedRoute>
-                <PredictionsPage />
-              </ProtectedRoute>
-            }
-          /> */}
-          {/* <Route
-            path="/leagues"
-            element={
-              <ProtectedRoute>
-                <LeaguesPage />
-              </ProtectedRoute>
-            }
-          /> */}
-          {/* <Route
-            path="/leaderboard"
-            element={
-              <ProtectedRoute>
-                <LeaderboardPage />
               </ProtectedRoute>
             }
           /> */}

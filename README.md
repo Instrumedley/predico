@@ -133,7 +133,7 @@ predico/
    npm run dev
    ```
 
-4. **Using Docker Compose (Recommended)**
+4. **Using Docker Compose (Backend Services)**
    ```bash
    # From project root
    docker-compose up -d
@@ -142,7 +142,17 @@ predico/
    # - PostgreSQL on port 5432
    # - Redis on port 6379
    # - Backend API on port 8000
-   # - Frontend on port 3000
+   
+   # Frontend runs separately (see below)
+   ```
+
+5. **Start Frontend (Separate Terminal)**
+   ```bash
+   cd frontend
+   npm install  # First time only
+   npm run dev
+   
+   # Frontend will be available at http://localhost:3000
    ```
 
 ### Database Migrations

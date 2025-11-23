@@ -1,4 +1,3 @@
 """
-Business logic services.
+Services module for business logic.
 """
-

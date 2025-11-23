@@ -18,20 +18,32 @@ export interface AuthResponse {
   access_token: string
   token_type: string
   user: {
-    id: string
+    id: number
     email: string
     username: string
   }
 }
 
+export interface SignupResponse {
+  user: {
+    id: number
+    email: string
+    username: string
+    is_active: boolean
+    email_verified: boolean
+    created_at: string
+  }
+  message: string
+}
+
 export const authService = {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const response = await apiClient.post<AuthResponse>('/auth/login', credentials)
+    const response = await apiClient.post<AuthResponse>('/api/v1/auth/login', credentials)
     return response.data
   },
 
-  async signup(data: SignupData): Promise<AuthResponse> {
-    const response = await apiClient.post<AuthResponse>('/auth/signup', data)
+  async signup(data: SignupData): Promise<SignupResponse> {
+    const response = await apiClient.post<SignupResponse>('/api/v1/auth/signup', data)
     return response.data
   },
 
@@ -40,4 +52,5 @@ export const authService = {
     localStorage.removeItem('access_token')
   },
 }
+
 

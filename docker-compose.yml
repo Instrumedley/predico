@@ -59,22 +59,9 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    networks:
-      - predico-network
-
-  # Frontend
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: predico-frontend
-    environment:
-      VITE_API_BASE_URL: http://localhost:8000
-    ports:
-      - "3000:80"
-    depends_on:
-      - backend
+    # Run migrations then start server
+    # Note: We need to wait a bit for postgres to be fully ready
+    command: sh -c "sleep 3 && alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     networks:
       - predico-network
 
