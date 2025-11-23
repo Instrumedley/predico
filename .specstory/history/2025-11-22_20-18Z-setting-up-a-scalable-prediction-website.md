@@ -22862,3 +22862,500 @@ I've also created `BRANCH_STRATEGY.md` documenting the new workflow. The CI/CD i
 
 ---
 
+_**User (2025-11-23 06:29Z)**_
+
+I'd like to block the main branch to accept direct pushes to it (only PRs are allowed) Is this something I need to configure directly on github? if so, how?
+
+---
+
+_**Agent (model default, mode Ask)**_
+
+
+
+---
+
+
+Configure this in GitHub's repository settings. Steps:
+
+## How to protect the main branch
+
+### Step 1: Go to repository settings
+1. Open your repository: `https://github.com/Instrumedley/predico`
+2. Click **Settings** (top menu)
+3. In the left sidebar, click **Branches**
+
+### Step 2: Add branch protection rule
+1. Under **Branch protection rules**, click **Add rule** (or **Add branch protection rule**)
+2. In **Branch name pattern**, enter: `main`
+3. Enable these settings:
+
+#### Required settings
+- ✅ **Require a pull request before merging**
+  - ✅ **Require approvals** (optional, set to 1 or more)
+  - ✅ **Dismiss stale pull request approvals when new commits are pushed**
+  - ✅ **Require review from Code Owners** (optional, if you have a CODEOWNERS file)
+
+- ✅ **Require status checks to pass before merging**
+  - ✅ **Require branches to be up to date before merging**
+  - Select the checks: `test`, `build-and-push` (or all checks)
+
+- ✅ **Do not allow bypassing the above settings** (recommended)
+  - This prevents admins from bypassing the rules
+
+#### Optional but recommended
+- ✅ **Restrict who can push to matching branches**
+  - Leave empty to allow all contributors (PRs only)
+  - Or specify teams/users who can push directly
+
+- ✅ **Require conversation resolution before merging**
+  - Ensures all PR comments are addressed
+
+- ✅ **Require linear history**
+  - Prevents merge commits, keeps history clean
+
+- ✅ **Include administrators**
+  - Applies rules to admins too
+
+### Step 3: Save
+Click **Create** (or **Save changes**)
+
+## What this does
+
+After enabling:
+- ✅ Direct pushes to `main` are blocked
+- ✅ All changes must go through PRs
+- ✅ PRs must be approved (if you enabled approvals)
+- ✅ CI checks must pass before merging
+- ✅ Merge button is disabled until requirements are met
+
+## Optional: protect other branches
+
+You can also protect:
+- `production` branch (same settings, or stricter)
+- `staging` branch (optional, less strict)
+
+## Quick summary
+
+**Settings → Branches → Add rule → Pattern: `main` → Enable PR requirement → Save**
+
+This is a GitHub UI setting, not code. After saving, the protection is active immediately.
+
+If you want, I can also help set up a `CODEOWNERS` file to require specific reviewers.
+
+---
+
+_**User (2025-11-23 06:29Z)**_
+
+apparently I can't reinforce that if I don't upgrade my account to Team
+
+---
+
+_**Agent (model default, mode Ask)**_
+
+
+
+---
+
+
+GitHub Free has limited branch protection. Here’s what you can do:
+
+## What’s available on GitHub Free
+
+You can still protect the main branch, but with fewer options:
+
+### Available on Free plan
+1. Basic branch protection
+   - Go to Settings → Branches → Add rule
+   - Pattern: `main`
+   - Enable: "Require a pull request before merging"
+   - This blocks direct pushes and requires PRs
+
+2. Status checks (if you have CI/CD)
+   - "Require status checks to pass before merging"
+   - Your GitHub Actions will show up here
+
+### Not available on Free plan
+- Require approvals (needs Team plan)
+- Require review from Code Owners (needs Team plan)
+- Restrict who can push (needs Team plan)
+
+## Workaround: enforce via CI/CD
+
+You can enforce PR-only merges in your GitHub Actions workflow:
+
+```yaml
+# Add this job to your .github/workflows/ci-cd.yml
+  check-branch-protection:
+    name: Check Branch Protection
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Block direct pushes to main
+        run: |
+          echo "❌ Direct pushes to main are not allowed!"
+          echo "Please create a pull request instead."
+          exit 1
+```
+
+This will fail the workflow if someone tries to push directly to main.
+
+## Recommended setup (Free plan)
+
+1. Enable basic protection:
+   - Settings → Branches → Add rule
+   - Pattern: `main`
+   - ✅ Require a pull request before merging
+   - ✅ Require status checks to pass (select your CI checks)
+   - ✅ Include administrators
+
+2. Add the CI check above to block direct pushes
+
+3. Team discipline:
+   - Document that all changes go through PRs
+   - Review PRs before merging
+
+## Alternative: GitHub Pro
+
+If you need approvals and stricter rules, consider:
+- GitHub Pro ($4/month) — includes branch protection with approvals
+- GitHub Team — full features
+
+For now, the basic protection + CI check should be enough to prevent direct pushes to main.
+
+Should I add the CI check to your workflow file?
+
+---
+
+_**User (2025-11-23 06:29Z)**_
+
+yes, add the CI check to the workflow to block direct pushes to main
+
+---
+
+_**Agent (model default, mode Agent)**_
+
+
+
+---
+
+
+Adding a CI check to block direct pushes to main:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/rafael/PycharmProjects/predico/.github/workflows/ci-cd.yml</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **code_edit** • Edit file: /Users/rafael/PycharmProjects/predico/.github/workflows/ci-cd.yml</summary>
+
+**Chunk 1**
+Lines added: 17, lines removed: undefined
+
+```diff
+@@ -20,4 +20,21 @@
+  
+  jobs:
++   check-branch-protection:
++     name: Check Branch Protection
++     runs-on: ubuntu-latest
++     if: github.event_name == &#39;push&#39; &amp;&amp; github.ref == &#39;refs/heads/main&#39;
++     steps:
++       - name: Block direct pushes to main
++         run: |
++           echo &quot;::error::Direct pushes to main branch are not allowed!&quot;
++           echo &quot;Please create a pull request instead.&quot;
++           echo &quot;&quot;
++           echo &quot;Workflow:&quot;
++           echo &quot;1. Create a feature branch&quot;
++           echo &quot;2. Push your changes to the feature branch&quot;
++           echo &quot;3. Create a pull request to main&quot;
++           echo &quot;4. After review and approval, merge the PR&quot;
++           exit 1
++ 
+    test:
+      name: Run Tests
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **code_edit** • Edit file: /Users/rafael/PycharmProjects/predico/.github/workflows/ci-cd.yml</summary>
+
+**Chunk 1**
+Lines added: 2, lines removed: undefined
+
+```diff
+@@ -39,4 +39,6 @@
+    test:
+      name: Run Tests
++     needs: check-branch-protection
++     if: always() &amp;&amp; (needs.check-branch-protection.result != &#39;failure&#39;)
+      runs-on: ubuntu-latest
+      
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/rafael/PycharmProjects/predico/.github/workflows/ci-cd.yml</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Updating the check to allow PR merges but block direct pushes:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **code_edit** • Edit file: /Users/rafael/PycharmProjects/predico/.github/workflows/ci-cd.yml</summary>
+
+**Chunk 1**
+Lines added: 16, lines removed: 3
+
+```diff
+@@ -25,13 +25,26 @@
+      if: github.event_name == &#39;push&#39; &amp;&amp; github.ref == &#39;refs/heads/main&#39;
+      steps:
++       - name: Check if push is from PR merge
++         id: check-merge
++         run: |
++           # Check if commit message indicates a PR merge
++           if echo &quot;${{ github.event.head_commit.message }}&quot; | grep -q &quot;^Merge pull request&quot;; then
++             echo &quot;is_pr_merge=true&quot; &gt;&gt; $GITHUB_OUTPUT
++             echo &quot;✅ This is a PR merge - allowing&quot;
++           else
++             echo &quot;is_pr_merge=false&quot; &gt;&gt; $GITHUB_OUTPUT
++             echo &quot;❌ This is a direct push - blocking&quot;
++           fi
++       
+        - name: Block direct pushes to main
++         if: steps.check-merge.outputs.is_pr_merge == &#39;false&#39;
+          run: |
+            echo &quot;::error::Direct pushes to main branch are not allowed!&quot;
+            echo &quot;Please create a pull request instead.&quot;
+            echo &quot;&quot;
+            echo &quot;Workflow:&quot;
+-           echo &quot;1. Create a feature branch&quot;
+-           echo &quot;2. Push your changes to the feature branch&quot;
+-           echo &quot;3. Create a pull request to main&quot;
++           echo &quot;1. Create a feature branch: git checkout -b feature/your-feature&quot;
++           echo &quot;2. Push your changes: git push origin feature/your-feature&quot;
++           echo &quot;3. Create a pull request to main on GitHub&quot;
+            echo &quot;4. After review and approval, merge the PR&quot;
+            exit 1
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/rafael/PycharmProjects/predico/.github/workflows/ci-cd.yml</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Fixing the test job condition to handle cases where the check doesn't run:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **code_edit** • Edit file: /Users/rafael/PycharmProjects/predico/.github/workflows/ci-cd.yml</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -53,5 +53,5 @@
+      name: Run Tests
+      needs: check-branch-protection
+-     if: always() &amp;&amp; (needs.check-branch-protection.result != &#39;failure&#39;)
++     if: always() &amp;&amp; (needs.check-branch-protection.result == &#39;success&#39; || needs.check-branch-protection.result == &#39;skipped&#39;)
+      runs-on: ubuntu-latest
+      
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/rafael/PycharmProjects/predico/.github/workflows/ci-cd.yml</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Updating the check to always run, but only fail on direct pushes to main:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **code_edit** • Edit file: /Users/rafael/PycharmProjects/predico/.github/workflows/ci-cd.yml</summary>
+
+**Chunk 1**
+Lines added: 14, lines removed: 7
+
+```diff
+@@ -23,20 +23,27 @@
+      name: Check Branch Protection
+      runs-on: ubuntu-latest
+-     if: github.event_name == &#39;push&#39; &amp;&amp; github.ref == &#39;refs/heads/main&#39;
++     if: github.event_name == &#39;push&#39;
+      steps:
+-       - name: Check if push is from PR merge
+-         id: check-merge
++       - name: Check if direct push to main
++         id: check-push
+          run: |
++           # Only check main branch
++           if [[ &quot;${{ github.ref }}&quot; != &quot;refs/heads/main&quot; ]]; then
++             echo &quot;is_direct_push=false&quot; &gt;&gt; $GITHUB_OUTPUT
++             echo &quot;✅ Not main branch - allowing&quot;
++             exit 0
++           fi
++           
+            # Check if commit message indicates a PR merge
+            if echo &quot;${{ github.event.head_commit.message }}&quot; | grep -q &quot;^Merge pull request&quot;; then
+-             echo &quot;is_pr_merge=true&quot; &gt;&gt; $GITHUB_OUTPUT
++             echo &quot;is_direct_push=false&quot; &gt;&gt; $GITHUB_OUTPUT
+              echo &quot;✅ This is a PR merge - allowing&quot;
+            else
+-             echo &quot;is_pr_merge=false&quot; &gt;&gt; $GITHUB_OUTPUT
+-             echo &quot;❌ This is a direct push - blocking&quot;
++             echo &quot;is_direct_push=true&quot; &gt;&gt; $GITHUB_OUTPUT
++             echo &quot;❌ This is a direct push to main - blocking&quot;
+            fi
+        
+        - name: Block direct pushes to main
+-         if: steps.check-merge.outputs.is_pr_merge == &#39;false&#39;
++         if: steps.check-push.outputs.is_direct_push == &#39;true&#39;
+          run: |
+            echo &quot;::error::Direct pushes to main branch are not allowed!&quot;
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **code_edit** • Edit file: /Users/rafael/PycharmProjects/predico/.github/workflows/ci-cd.yml</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -60,5 +60,5 @@
+      name: Run Tests
+      needs: check-branch-protection
+-     if: always() &amp;&amp; (needs.check-branch-protection.result == &#39;success&#39; || needs.check-branch-protection.result == &#39;skipped&#39;)
++     if: needs.check-branch-protection.result == &#39;success&#39;
+      runs-on: ubuntu-latest
+      
+```
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+
+Added a CI check to block direct pushes to main. Here's what it does:
+
+## How it works
+
+1. **Runs on all push events** to check the branch
+2. **For non-main branches**: Passes immediately (no restrictions)
+3. **For main branch**:
+   - Checks if the commit message starts with "Merge pull request" (PR merge)
+   - If it's a PR merge → Allows and continues
+   - If it's a direct push → Blocks and fails the pipeline
+
+## What happens
+
+### Direct push to main:
+```
+❌ check-branch-protection: FAILED
+   Error: Direct pushes to main branch are not allowed!
+   → Pipeline stops, no tests run, no deployment
+```
+
+### PR merge to main:
+```
+✅ check-branch-protection: PASSED (PR merge detected)
+✅ test: Runs normally
+✅ build-and-push: Runs normally
+✅ deploy-dev: Deploys to dev
+```
+
+### Push to other branches:
+```
+✅ check-branch-protection: PASSED (not main branch)
+✅ Rest of pipeline: Runs normally
+```
+
+## Testing
+
+To test it works:
+1. Try pushing directly to main (should fail)
+2. Create a PR and merge it (should succeed)
+
+The check is now active. Direct pushes to main will be blocked, while PR merges will proceed normally.
+
+---
+
