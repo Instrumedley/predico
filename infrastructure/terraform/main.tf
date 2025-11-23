@@ -16,7 +16,7 @@ terraform {
   # backend "s3" {
   #   bucket = "predico-terraform-state"
   #   key    = "terraform.tfstate"
-  #   region = "us-east-1"
+  #   region = "eu-north-1"  # Stockholm, Sweden
   # }
 }
 

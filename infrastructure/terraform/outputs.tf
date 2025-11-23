@@ -45,3 +45,8 @@ output "cloudfront_distribution_id" {
   value       = aws_cloudfront_distribution.assets.id
 }
 
+output "environment" {
+  description = "Current environment"
+  value       = var.environment
+}
+

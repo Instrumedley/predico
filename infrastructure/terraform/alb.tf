@@ -1,6 +1,6 @@
 # Application Load Balancer
 resource "aws_lb" "main" {
-  name               = "${var.project_name}-alb"
+  name               = "${var.project_name}-${var.environment}-alb"
   internal           = false
   load_balancer_type = "application"
   security_groups     = [aws_security_group.alb.id]
@@ -17,7 +17,7 @@ resource "aws_lb" "main" {
 
 # Security Group for ALB
 resource "aws_security_group" "alb" {
-  name        = "${var.project_name}-alb-sg"
+  name        = "${var.project_name}-${var.environment}-alb-sg"
   description = "Security group for Application Load Balancer"
   vpc_id      = aws_vpc.main.id
 
@@ -51,7 +51,7 @@ resource "aws_security_group" "alb" {
 
 # Target Group for Backend API
 resource "aws_lb_target_group" "backend" {
-  name        = "${var.project_name}-backend-tg"
+  name        = "${var.project_name}-${var.environment}-backend-tg"
   port        = 8000
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
@@ -77,7 +77,7 @@ resource "aws_lb_target_group" "backend" {
 
 # Target Group for Frontend
 resource "aws_lb_target_group" "frontend" {
-  name        = "${var.project_name}-frontend-tg"
+  name        = "${var.project_name}-${var.environment}-frontend-tg"
   port        = 80
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id

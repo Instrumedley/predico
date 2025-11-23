@@ -1,6 +1,6 @@
 # Security Group for RDS
 resource "aws_security_group" "rds" {
-  name        = "${var.project_name}-rds-sg"
+  name        = "${var.project_name}-${var.environment}-rds-sg"
   description = "Security group for RDS PostgreSQL"
   vpc_id      = aws_vpc.main.id
 
@@ -26,12 +26,13 @@ resource "aws_security_group" "rds" {
 
 # RDS Parameter Group
 resource "aws_db_parameter_group" "main" {
-  name   = "${var.project_name}-postgres-params"
+  name   = "${var.project_name}-${var.environment}-postgres-params"
   family = "postgres15"
 
   parameter {
-    name  = "max_connections"
-    value = "100"
+    name         = "max_connections"
+    value        = "100"
+    apply_method = "pending-reboot"  # Static parameters require reboot
   }
 
   tags = {
@@ -43,10 +44,10 @@ resource "aws_db_parameter_group" "main" {
 
 # RDS Instance
 resource "aws_db_instance" "main" {
-  identifier = "${var.project_name}-db"
+  identifier = "${var.project_name}-${var.environment}-db"
 
   engine         = "postgres"
-  engine_version = "15.4"
+  engine_version = "15.15"  # Latest available in eu-north-1
   instance_class = var.db_instance_class
 
   allocated_storage     = var.db_allocated_storage
@@ -85,7 +86,7 @@ resource "random_password" "db_password" {
 
 # Store password in AWS Secrets Manager
 resource "aws_secretsmanager_secret" "db_password" {
-  name = "${var.project_name}/database/password"
+  name = "${var.project_name}/${var.environment}/database/password"
 }
 
 resource "aws_secretsmanager_secret_version" "db_password" {

@@ -1,6 +1,6 @@
 # ElastiCache Subnet Group
 resource "aws_elasticache_subnet_group" "main" {
-  name       = "${var.project_name}-cache-subnet"
+  name       = "${var.project_name}-${var.environment}-cache-subnet"
   subnet_ids = aws_subnet.private[*].id
 
   tags = {
@@ -10,7 +10,7 @@ resource "aws_elasticache_subnet_group" "main" {
 
 # Security Group for ElastiCache
 resource "aws_security_group" "redis" {
-  name        = "${var.project_name}-redis-sg"
+  name        = "${var.project_name}-${var.environment}-redis-sg"
   description = "Security group for ElastiCache Redis"
   vpc_id      = aws_vpc.main.id
 
@@ -36,7 +36,7 @@ resource "aws_security_group" "redis" {
 
 # ElastiCache Redis Cluster
 resource "aws_elasticache_replication_group" "main" {
-  replication_group_id       = "${var.project_name}-redis"
+  replication_group_id       = "${var.project_name}-${var.environment}-redis"
   description                = "Redis cluster for ${var.project_name}"
 
   engine               = "redis"
@@ -73,7 +73,7 @@ resource "random_password" "redis_password" {
 
 # Store Redis password in Secrets Manager
 resource "aws_secretsmanager_secret" "redis_password" {
-  name = "${var.project_name}/redis/password"
+  name = "${var.project_name}/${var.environment}/redis/password"
 }
 
 resource "aws_secretsmanager_secret_version" "redis_password" {

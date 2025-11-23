@@ -1,6 +1,6 @@
 # ECS Cluster
 resource "aws_ecs_cluster" "main" {
-  name = "${var.project_name}-cluster"
+  name = "${var.project_name}-${var.environment}-cluster"
 
   setting {
     name  = "containerInsights"
@@ -14,7 +14,7 @@ resource "aws_ecs_cluster" "main" {
 
 # CloudWatch Log Group
 resource "aws_cloudwatch_log_group" "ecs" {
-  name              = "/ecs/${var.project_name}"
+  name              = "/ecs/${var.project_name}-${var.environment}"
   retention_in_days = 7
 
   tags = {
@@ -24,7 +24,7 @@ resource "aws_cloudwatch_log_group" "ecs" {
 
 # ECS Task Execution Role
 resource "aws_iam_role" "ecs_execution" {
-  name = "${var.project_name}-ecs-execution-role"
+  name = "${var.project_name}-${var.environment}-ecs-execution-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -51,7 +51,7 @@ resource "aws_iam_role_policy_attachment" "ecs_execution" {
 
 # Additional policy for Secrets Manager
 resource "aws_iam_role_policy" "ecs_execution_secrets" {
-  name = "${var.project_name}-ecs-execution-secrets"
+  name = "${var.project_name}-${var.environment}-ecs-execution-secrets"
   role = aws_iam_role.ecs_execution.id
 
   policy = jsonencode({
@@ -73,7 +73,7 @@ resource "aws_iam_role_policy" "ecs_execution_secrets" {
 
 # ECS Task Role
 resource "aws_iam_role" "ecs_task" {
-  name = "${var.project_name}-ecs-task-role"
+  name = "${var.project_name}-${var.environment}-ecs-task-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -95,7 +95,7 @@ resource "aws_iam_role" "ecs_task" {
 
 # Security Group for ECS Tasks
 resource "aws_security_group" "ecs" {
-  name        = "${var.project_name}-ecs-sg"
+  name        = "${var.project_name}-${var.environment}-ecs-sg"
   description = "Security group for ECS tasks"
   vpc_id      = aws_vpc.main.id
 
@@ -121,7 +121,7 @@ resource "aws_security_group" "ecs" {
 
 # ECR Repository for Backend
 resource "aws_ecr_repository" "backend" {
-  name                 = "${var.project_name}-backend"
+  name                 = "${var.project_name}-${var.environment}-backend"
   image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {
@@ -135,7 +135,7 @@ resource "aws_ecr_repository" "backend" {
 
 # ECR Repository for Frontend
 resource "aws_ecr_repository" "frontend" {
-  name                 = "${var.project_name}-frontend"
+  name                 = "${var.project_name}-${var.environment}-frontend"
   image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {
