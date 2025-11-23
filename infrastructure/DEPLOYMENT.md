@@ -24,7 +24,7 @@ This guide walks you through deploying the Predico application to AWS.
 
 3. Edit `terraform.tfvars` with your values:
    ```hcl
-   aws_region            = "us-east-1"
+   aws_region            = "eu-north-1"  # Stockholm, Sweden
    environment           = "dev"  # or "staging", "prod"
    project_name          = "predico"
    db_instance_class     = "db.t3.micro"  # Use larger instance for production
@@ -110,9 +110,9 @@ Important outputs:
 
 1. Get ECR login:
    ```bash
-   aws ecr get-login-password --region us-east-1 | \
+   aws ecr get-login-password --region eu-north-1 | \
      docker login --username AWS --password-stdin \
-     <account-id>.dkr.ecr.us-east-1.amazonaws.com
+     <account-id>.dkr.ecr.eu-north-1.amazonaws.com
    ```
 
 2. Build and tag:

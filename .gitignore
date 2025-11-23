@@ -177,6 +177,9 @@ target/
 .cursorindexingignore
 .specstory/
 
+# Git Hooks
+.husky/_/
+
 # Misc
 *.orig
 .sass-cache/

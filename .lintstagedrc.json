@@ -1,0 +1,9 @@
+{
+  "*.{ts,tsx}": [
+    "cd frontend && npm run lint -- --fix"
+  ],
+  "*.{tf,tfvars}": [
+    "terraform fmt"
+  ]
+}
+

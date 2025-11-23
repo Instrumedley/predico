@@ -1,6 +1,6 @@
 # ECS Service for Backend
 resource "aws_ecs_service" "backend" {
-  name            = "${var.project_name}-backend-service"
+  name            = "${var.project_name}-${var.environment}-backend-service"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.backend.arn
   desired_count   = var.min_capacity
@@ -30,7 +30,7 @@ resource "aws_ecs_service" "backend" {
 
 # ECS Service for Frontend
 resource "aws_ecs_service" "frontend" {
-  name            = "${var.project_name}-frontend-service"
+  name            = "${var.project_name}-${var.environment}-frontend-service"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.frontend.arn
   desired_count   = var.min_capacity
@@ -59,7 +59,7 @@ resource "aws_ecs_service" "frontend" {
 
 # ECS Task Definition for Backend
 resource "aws_ecs_task_definition" "backend" {
-  family                   = "${var.project_name}-backend"
+  family                   = "${var.project_name}-${var.environment}-backend"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = var.fargate_cpu
@@ -139,7 +139,7 @@ resource "aws_ecs_task_definition" "backend" {
 
 # ECS Task Definition for Frontend
 resource "aws_ecs_task_definition" "frontend" {
-  family                   = "${var.project_name}-frontend"
+  family                   = "${var.project_name}-${var.environment}-frontend"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = 256
@@ -202,7 +202,7 @@ resource "aws_appautoscaling_target" "backend" {
 
 # Auto Scaling Policy for Backend (CPU)
 resource "aws_appautoscaling_policy" "backend_cpu" {
-  name               = "${var.project_name}-backend-cpu-autoscaling"
+  name               = "${var.project_name}-${var.environment}-backend-cpu-autoscaling"
   policy_type        = "TargetTrackingScaling"
   resource_id        = aws_appautoscaling_target.backend.resource_id
   scalable_dimension = aws_appautoscaling_target.backend.scalable_dimension
@@ -220,7 +220,7 @@ resource "aws_appautoscaling_policy" "backend_cpu" {
 
 # Auto Scaling Policy for Backend (Memory)
 resource "aws_appautoscaling_policy" "backend_memory" {
-  name               = "${var.project_name}-backend-memory-autoscaling"
+  name               = "${var.project_name}-${var.environment}-backend-memory-autoscaling"
   policy_type        = "TargetTrackingScaling"
   resource_id        = aws_appautoscaling_target.backend.resource_id
   scalable_dimension = aws_appautoscaling_target.backend.scalable_dimension
