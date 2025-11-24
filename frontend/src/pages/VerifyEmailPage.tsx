@@ -21,10 +21,13 @@ export const VerifyEmailPage: React.FC = () => {
     if (token) {
       verifyEmail(token)
     } else {
+      // No token - user probably came here directly or from signup page
+      // Show a helpful message instead of an error
       setStatus('error')
-      setMessage('No verification token provided')
+      setMessage('Please check your email and click the verification link we sent you.')
     }
-  }, [searchParams, location])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Only run once on mount to prevent duplicate requests
 
   const verifyEmail = async (token: string) => {
     try {
@@ -83,9 +86,12 @@ export const VerifyEmailPage: React.FC = () => {
 
         {status === 'error' && (
           <div className="space-y-4">
-            <div className="rounded-md bg-red-50 p-4">
-              <div className="text-sm text-red-800">
+            <div className="rounded-md bg-blue-50 p-4">
+              <div className="text-sm text-blue-800">
                 <p className="font-medium">{message}</p>
+                <p className="mt-2 text-xs">
+                  The verification link should be in the email we sent you. Make sure to check your spam folder!
+                </p>
               </div>
             </div>
 
@@ -103,7 +109,7 @@ export const VerifyEmailPage: React.FC = () => {
               />
               <button
                 onClick={resendVerification}
-                className="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-DEFAULT hover:bg-primary-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-medium"
+                className="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-medium hover:bg-primary-DEFAULT focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-medium"
               >
                 Resend Verification Email
               </button>

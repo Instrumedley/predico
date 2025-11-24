@@ -42,18 +42,24 @@ if isinstance(cors_origins, str):
     except json.JSONDecodeError:
         cors_origins = [origin.strip() for origin in cors_origins.split(',') if origin.strip()]
 
+# Ensure it's a list
+if not isinstance(cors_origins, list):
+    cors_origins = list(cors_origins) if cors_origins else []
+
 # Debug: Log CORS origins (remove in production)
 if settings.DEBUG:
     import logging
     logger = logging.getLogger(__name__)
     logger.info(f"CORS Origins configured: {cors_origins}")
+    logger.info(f"CORS Origins type: {type(cors_origins)}")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
+    allow_origins=cors_origins,  # Must be a list
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Trusted host middleware for production

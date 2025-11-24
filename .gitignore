@@ -5,6 +5,10 @@
 .env.production
 .env.development
 
+# Email logs (local development)
+email_logs/
+backend/email_logs/
+
 # IDE - IntelliJ IDEA / PyCharm
 .idea/
 *.iml

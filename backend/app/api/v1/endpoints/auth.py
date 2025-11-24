@@ -4,7 +4,7 @@ Authentication endpoints for signup, login, email verification, and password res
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from app.db.database import get_db
 from app.db.models import User
@@ -28,6 +28,9 @@ from app.core.config import settings
 from app.services.email_service import email_service
 from app.services.token_service import TokenService
 from app.services.cognito_service import cognito_service
+import structlog
+
+logger = structlog.get_logger(__name__)
 
 router = APIRouter()
 
@@ -95,8 +98,13 @@ async def signup(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     
     # Generate verification token and send email (if not using Cognito email verification)
     if not settings.COGNITO_ENABLED or not email_verified:
-        verification_token = await TokenService.create_verification_token(new_user.id, db)
-        email_service.send_verification_email(new_user.email, verification_token)
+        # Create token directly on the user object to ensure it's saved
+        verification_token = TokenService.generate_token()
+        expires_at = datetime.utcnow() + timedelta(hours=24)
+        new_user.email_verification_token = verification_token
+        new_user.email_verification_expires = expires_at
+        await db.commit()
+        await email_service.send_verification_email(new_user.email, verification_token, username=new_user.username)
     
     return SignupResponse(
         user=UserResponse.model_validate(new_user),
@@ -202,16 +210,37 @@ async def resend_verification(
 ):
     """
     Resend email verification link.
+    
+    Only sends email if:
+    - User exists in database
+    - User's email is not already verified
+    
+    Returns the same message regardless to prevent email enumeration attacks.
     """
     # Find user by email
     result = await db.execute(select(User).where(User.email == request.email))
     user = result.scalar_one_or_none()
     
-    # For security, always return success even if user doesn't exist
-    if user and not user.email_verified:
-        verification_token = await TokenService.create_verification_token(user.id, db)
-        email_service.send_verification_email(user.email, verification_token)
+    # Only send email if user exists AND email is not verified
+    # This prevents:
+    # 1. Spamming non-existent emails
+    # 2. Spamming already-verified users
+    if user:
+        if user.email_verified:
+            # Email already verified - don't send, but return success message
+            # to prevent revealing that the email exists and is verified
+            logger.info("Resend verification requested for already verified email", email=request.email)
+        else:
+            # User exists and email not verified - send verification email
+            verification_token = await TokenService.create_verification_token(user.id, db)
+            await email_service.send_verification_email(user.email, verification_token, username=user.username)
+            logger.info("Verification email resent", email=request.email, user_id=user.id)
+    else:
+        # User doesn't exist - don't send email, but return success message
+        # to prevent email enumeration attacks
+        logger.warning("Resend verification requested for non-existent email", email=request.email)
     
+    # Always return the same message to prevent email enumeration
     return ResendVerificationResponse(
         message="If the email exists and is not verified, a verification link has been sent."
     )
@@ -232,7 +261,7 @@ async def forgot_password(
     # For security, always return success even if user doesn't exist
     if user:
         reset_token = await TokenService.create_password_reset_token(user.id, db)
-        email_service.send_password_reset_email(user.email, reset_token)
+        await email_service.send_password_reset_email(user.email, reset_token, username=user.username)
     
     return ForgotPasswordResponse(
         message="If the email exists, a password reset link has been sent."

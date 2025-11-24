@@ -26,6 +26,8 @@ class TokenService:
         """
         Create and store email verification token for user.
         
+        Token expires in 24 hours.
+        
         Args:
             user_id: User ID
             db: Database session
@@ -34,14 +36,16 @@ class TokenService:
             Verification token
         """
         token = TokenService.generate_token()
+        expires_at = datetime.utcnow() + timedelta(hours=24)  # Token expires in 24 hours
         
         result = await db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
         
         if user:
             user.email_verification_token = token
+            user.email_verification_expires = expires_at
             await db.commit()
-            logger.info("Verification token created", user_id=user_id)
+            logger.info("Verification token created", user_id=user_id, expires_at=expires_at)
         
         return token
     
@@ -50,25 +54,37 @@ class TokenService:
         """
         Verify email verification token and mark email as verified.
         
+        Checks if token is valid and not expired (24 hours).
+        If email is already verified, returns success (idempotent).
+        
         Args:
             token: Verification token
             db: Database session
             
         Returns:
-            User if token is valid, None otherwise
+            User if token is valid and not expired, None otherwise
         """
+        # First, try to find user with this token (even if expired, to check if already verified)
         result = await db.execute(
             select(User).where(User.email_verification_token == token)
         )
         user = result.scalar_one_or_none()
         
         if user:
+            # Token found - check if already verified (idempotent)
             if user.email_verified:
-                logger.warning("Email already verified", user_id=user.id)
-                return user  # Idempotent - return user even if already verified
+                logger.info("Email already verified (idempotent)", user_id=user.id)
+                return user
             
+            # Check if token is expired
+            if user.email_verification_expires and user.email_verification_expires <= datetime.utcnow():
+                logger.warning("Verification token expired", user_id=user.id)
+                return None
+            
+            # Token is valid and not expired - verify the email
             user.email_verified = True
-            user.email_verification_token = None  # Clear token after use
+            # Keep token for idempotency (don't clear it)
+            # This allows the same token to be used multiple times if needed
             await db.commit()
             logger.info("Email verified", user_id=user.id)
             return user

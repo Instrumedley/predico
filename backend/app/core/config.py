@@ -77,6 +77,12 @@ class Settings(BaseSettings):
     COGNITO_USER_POOL_ID: Optional[str] = None
     COGNITO_CLIENT_ID: Optional[str] = None
     
+    # Email Configuration
+    EMAIL_ENABLED: bool = True  # Set to False to disable email sending
+    EMAIL_BACKEND: str = "local"  # "local" for development, "ses" for AWS SES
+    SES_FROM_EMAIL: str = "noreply@predico.com"
+    FRONTEND_URL: str = "http://localhost:3005"  # Base URL for email links
+    
     # Cloudflare
     CLOUDFLARE_ZONE_ID: Optional[str] = None
     

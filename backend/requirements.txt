@@ -29,6 +29,9 @@ hiredis==2.2.3
 boto3==1.29.7
 botocore==1.32.7
 
+# Email Templates
+Jinja2==3.1.2
+
 # Monitoring & Logging
 prometheus-client==0.19.0
 structlog==23.2.0

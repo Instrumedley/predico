@@ -18,7 +18,7 @@ export const HomePage: React.FC = () => {
           {isAuthenticated ? (
             <Link
               to="/dashboard"
-              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary-DEFAULT hover:bg-primary-medium"
+              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary-medium hover:bg-primary-DEFAULT"
             >
               Go to Dashboard
             </Link>
@@ -26,13 +26,13 @@ export const HomePage: React.FC = () => {
             <div className="space-x-4">
               <Link
                 to="/login"
-                className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary-DEFAULT hover:bg-primary-medium"
+                className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary-medium hover:bg-primary-DEFAULT"
               >
                 Sign In
               </Link>
               <Link
                 to="/signup"
-                className="inline-flex items-center px-6 py-3 border border-primary-DEFAULT text-base font-medium rounded-md text-primary-DEFAULT bg-white hover:bg-neutral-light"
+                className="inline-flex items-center px-6 py-3 border border-primary-medium text-base font-medium rounded-md text-primary-medium bg-white hover:bg-neutral-light"
               >
                 Sign Up
               </Link>
