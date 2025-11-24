@@ -20,6 +20,7 @@ class User(Base):
     is_superuser = Column(Boolean, default=False)
     email_verified = Column(Boolean, default=False, nullable=False, index=True)
     email_verification_token = Column(String, nullable=True, unique=True, index=True)
+    email_verification_expires = Column(DateTime, nullable=True)  # Token expiration time
     password_reset_token = Column(String, nullable=True, unique=True, index=True)
     password_reset_expires = Column(DateTime, nullable=True)
     cognito_user_id = Column(String, nullable=True, unique=True, index=True)  # AWS Cognito user ID

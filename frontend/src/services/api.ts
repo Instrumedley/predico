@@ -3,7 +3,9 @@
  */
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+// Use relative URL to go through Vite proxy in development
+// In production, this will be set via VITE_API_BASE_URL environment variable
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({

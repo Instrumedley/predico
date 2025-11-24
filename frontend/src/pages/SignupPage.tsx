@@ -48,10 +48,7 @@ export const SignupPage: React.FC = () => {
       setIsLoading(true)
       await signup(data.email, data.password, data.username)
       setSuccess(true)
-      // Redirect to verification page after a delay
-      setTimeout(() => {
-        navigate('/verify-email', { state: { email: data.email } })
-      }, 2000)
+      // Don't redirect - user should check their email and click the verification link
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Signup failed. Please try again.')
     } finally {
@@ -62,14 +59,31 @@ export const SignupPage: React.FC = () => {
   if (success) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-light px-4">
-        <div className="max-w-md w-full text-center">
+        <div className="max-w-md w-full text-center space-y-4">
           <div className="rounded-md bg-green-50 p-4">
             <h3 className="text-lg font-medium text-green-800">
-              Account created successfully!
+              Account created successfully! 🎉
             </h3>
             <p className="mt-2 text-sm text-green-700">
-              Please check your email to verify your account.
+              We've sent a verification email to your inbox. Please check your email and click the verification link to activate your account.
             </p>
+            <p className="mt-4 text-xs text-green-600">
+              Didn't receive the email? Check your spam folder or{' '}
+              <Link
+                to="/verify-email"
+                className="font-medium underline hover:text-green-800"
+              >
+                click here to resend
+              </Link>
+            </p>
+          </div>
+          <div className="mt-4">
+            <Link
+              to="/login"
+              className="text-sm font-medium text-primary-medium hover:text-primary-dark"
+            >
+              Back to login
+            </Link>
           </div>
         </div>
       </div>
@@ -187,7 +201,7 @@ export const SignupPage: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-DEFAULT hover:bg-primary-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-medium hover:bg-primary-DEFAULT focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? 'Creating account...' : 'Create account'}
             </button>
