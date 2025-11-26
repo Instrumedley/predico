@@ -1,6 +1,6 @@
 {
-  "command": "",
-  "serverUrl": "",
+  "command": "cd frontend && npm run dev",
+  "serverUrl": "http://localhost:3005",
   "authenticateProxy": false,
   "autoDetectDevServer": true,
   "commitMode": "commits"

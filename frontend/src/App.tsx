@@ -4,6 +4,7 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import {
   HomePage,
+  DashboardPage,
   LoginPage,
   SignupPage,
   VerifyEmailPage,
@@ -25,14 +26,14 @@ function App() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           
           {/* Protected routes */}
-          {/* <Route
+          <Route
             path="/dashboard"
             element={
               <ProtectedRoute>
                 <DashboardPage />
               </ProtectedRoute>
             }
-          /> */}
+          />
         </Routes>
         <Toaster />
       </AuthProvider>
