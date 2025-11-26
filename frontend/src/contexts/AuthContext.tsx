@@ -5,7 +5,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { authService, AuthResponse, SignupResponse } from '@/services/auth'
 
 interface User {
-  id: string
+  id: number
   email: string
   username: string
 }

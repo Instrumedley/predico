@@ -31,7 +31,7 @@ export const LoginPage: React.FC = () => {
       setError('')
       setIsLoading(true)
       await login(data.email, data.password)
-      navigate('/')
+      navigate('/dashboard')
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Login failed. Please try again.')
     } finally {
