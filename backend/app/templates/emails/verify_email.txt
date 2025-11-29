@@ -1,0 +1,18 @@
+Welcome to Predico!
+
+Hi there,
+
+Thank you for signing up for Predico! We're excited to have you join our World Cup prediction community.
+
+To get started, please verify your email address by visiting this link:
+
+{{ verification_url }}
+
+This link will expire in 24 hours.
+
+If you didn't create an account with Predico, please ignore this email.
+
+---
+© 2025 Predico. All rights reserved.
+This is an automated email, please do not reply.
+

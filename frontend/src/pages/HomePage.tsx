@@ -1,9 +1,16 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
+import React, { useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 
 export const HomePage: React.FC = () => {
   const { isAuthenticated } = useAuth()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard')
+    }
+  }, [isAuthenticated, navigate])
 
   return (
     <div className="min-h-screen bg-neutral-light">
@@ -15,12 +22,18 @@ export const HomePage: React.FC = () => {
           <p className="text-xl text-neutral-DEFAULT mb-8">
             Predict World Cup matches and compete with friends!
           </p>
-          {isAuthenticated ? (
+          <div className="space-x-4">
+            <Link
+              to="/login"
+              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary-medium hover:bg-primary-DEFAULT"
+            >
+              Sign In
+            </Link>
             <Link
               to="/dashboard"
               className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary-medium hover:bg-primary-DEFAULT"
             >
-              Go to Dashboard
+              Sign Up
             </Link>
           ) : (
             <div className="space-x-4">
