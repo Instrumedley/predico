@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { NavBar, MiniMenu, DeadlineCard } from '@/components/layout'
 import { GroupStandingsComponent } from '@/components/standings'
+import { NextMatch, LatestResults } from '@/components/matches'
 
 type MenuOption = 'dashboard' | 'scorecard' | 'leagues'
 
@@ -25,9 +26,17 @@ export const DashboardPage: React.FC = () => {
           <GroupStandingsComponent />
         </div>
 
-        {/* Placeholder for future components */}
-        <div className="mt-8">
-          {/* NextMatch, LatestResults will go here */}
+        {/* Next Match and Latest Results */}
+        <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Next Match */}
+          <div>
+            <NextMatch />
+          </div>
+
+          {/* Latest Results */}
+          <div>
+            <LatestResults />
+          </div>
         </div>
       </div>
     </div>

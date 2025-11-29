@@ -30,27 +30,12 @@ export const HomePage: React.FC = () => {
               Sign In
             </Link>
             <Link
-              to="/dashboard"
-              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary-medium hover:bg-primary-DEFAULT"
+              to="/signup"
+              className="inline-flex items-center px-6 py-3 border border-primary-medium text-base font-medium rounded-md text-primary-medium bg-white hover:bg-neutral-light"
             >
               Sign Up
             </Link>
-          ) : (
-            <div className="space-x-4">
-              <Link
-                to="/login"
-                className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary-medium hover:bg-primary-DEFAULT"
-              >
-                Sign In
-              </Link>
-              <Link
-                to="/signup"
-                className="inline-flex items-center px-6 py-3 border border-primary-medium text-base font-medium rounded-md text-primary-medium bg-white hover:bg-neutral-light"
-              >
-                Sign Up
-              </Link>
-            </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
