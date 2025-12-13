@@ -1,71 +1,26 @@
 import React from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { NextMatchData } from '@/types/matches'
+import { getNextMatch } from '@/services/matches'
 import { mockNextMatch } from '@/data/mockMatches'
 import { abbreviateCountryName } from '@/utils/countryNames'
+import { getCountryCodeForFlag } from '@/utils/countryFlags'
 
 interface NextMatchProps {
   data?: NextMatchData // Optional prop for when we integrate with backend
 }
 
-export const NextMatch: React.FC<NextMatchProps> = ({ data }) => {
-  // Use provided data or fall back to mock data
-  // TODO: Replace with API call when backend is ready
-  const matchData = data || mockNextMatch
+export const NextMatch: React.FC<NextMatchProps> = ({ data: propData }) => {
+  // Fetch next match from API
+  const { data: apiData, isLoading, error } = useQuery<NextMatchData>({
+    queryKey: ['nextMatch'],
+    queryFn: getNextMatch,
+    staleTime: 1 * 60 * 1000, // 1 minute
+    retry: 1,
+  })
 
-  // Get country code for flag-icons (2-letter code)
-  const getCountryCode = (code: string): string => {
-    const codeMap: Record<string, string> = {
-      ARG: 'ar',
-      BRA: 'br',
-      URU: 'uy',
-      CHI: 'cl',
-      FRA: 'fr',
-      ENG: 'gb',
-      ESP: 'es',
-      GER: 'de',
-      USA: 'us',
-      MEX: 'mx',
-      CAN: 'ca',
-      CRC: 'cr',
-      NED: 'nl',
-      BEL: 'be',
-      POR: 'pt',
-      CRO: 'hr',
-      JPN: 'jp',
-      KOR: 'kr',
-      AUS: 'au',
-      IRN: 'ir',
-      MAR: 'ma',
-      SEN: 'sn',
-      EGY: 'eg',
-      NGA: 'ng',
-      ITA: 'it',
-      SUI: 'ch',
-      POL: 'pl',
-      TUR: 'tr',
-      DEN: 'dk',
-      SWE: 'se',
-      NOR: 'no',
-      FIN: 'fi',
-      COL: 'co',
-      ECU: 'ec',
-      PER: 'pe',
-      VEN: 've',
-      RUS: 'ru',
-      UKR: 'ua',
-      CZE: 'cz',
-      HUN: 'hu',
-      SAU: 'sa',
-      QAT: 'qa',
-      UAE: 'ae',
-      IRQ: 'iq',
-      NZL: 'nz',
-      TUN: 'tn',
-      CMR: 'cm',
-      GHA: 'gh',
-    }
-    return codeMap[code] || code.toLowerCase().slice(0, 2)
-  }
+  // Use provided data, API data, or fall back to mock data
+  const matchData = propData || apiData || mockNextMatch
 
   const formatDateTime = (isoString: string): { date: string; time: string } => {
     const date = new Date(isoString)
@@ -80,6 +35,15 @@ export const NextMatch: React.FC<NextMatchProps> = ({ data }) => {
       hour12: true,
     })
     return { date: dateStr, time: timeStr }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="rounded-lg border border-neutral-DEFAULT/20 shadow-sm p-6" style={{ backgroundColor: '#EEF8FF' }}>
+        <h3 className="text-lg font-bold text-neutral-DEFAULT mb-4">Next Match</h3>
+        <p className="text-neutral-DEFAULT/70">Loading...</p>
+      </div>
+    )
   }
 
   if (matchData.matches.length === 0) {
@@ -122,7 +86,7 @@ export const NextMatch: React.FC<NextMatchProps> = ({ data }) => {
                 {/* Home Team */}
                 <div className="flex-1 flex items-center space-x-2">
                   <span
-                    className={`fi fi-${getCountryCode(match.homeTeam.countryCode)} fis`}
+                    className={`fi fi-${getCountryCodeForFlag(match.homeTeam.countryCode)} fis`}
                     style={{ fontSize: '1.5rem' }}
                   ></span>
                   <span className="text-sm font-medium text-neutral-DEFAULT">
@@ -139,7 +103,7 @@ export const NextMatch: React.FC<NextMatchProps> = ({ data }) => {
                     {abbreviateCountryName(match.awayTeam.name)}
                   </span>
                   <span
-                    className={`fi fi-${getCountryCode(match.awayTeam.countryCode)} fis`}
+                    className={`fi fi-${getCountryCodeForFlag(match.awayTeam.countryCode)} fis`}
                     style={{ fontSize: '1.5rem' }}
                   ></span>
                 </div>
