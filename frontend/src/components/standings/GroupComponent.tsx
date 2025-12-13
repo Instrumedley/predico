@@ -67,7 +67,7 @@ export const GroupComponent: React.FC<GroupComponentProps> = ({ group }) => {
   return (
     <div className="bg-white rounded-lg border border-neutral-DEFAULT/20 shadow-sm overflow-hidden w-full min-w-[280px]">
       {/* Group Title */}
-      <div className="bg-neutral-DEFAULT/10 px-4 py-2 border-b border-neutral-DEFAULT/20">
+      <div className="px-4 py-2 border-b border-neutral-DEFAULT/20" style={{ backgroundColor: '#EEF8FF' }}>
         <h3 className="font-bold text-neutral-DEFAULT">Group {group.groupLetter}</h3>
       </div>
 
