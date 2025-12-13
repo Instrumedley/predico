@@ -7,6 +7,7 @@ export interface TeamStanding {
   position: number
   countryCode: string // ISO 3166-1 alpha-3 code (e.g., 'USA', 'BRA', 'ARG')
   countryName: string
+  flagEmoji?: string
   played: number
   wins: number
   draws: number

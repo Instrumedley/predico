@@ -1,71 +1,26 @@
 import React from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { LatestResultsData } from '@/types/matches'
+import { getLatestResults } from '@/services/matches'
 import { mockLatestResults } from '@/data/mockMatches'
 import { abbreviateCountryName } from '@/utils/countryNames'
+import { getCountryCodeForFlag } from '@/utils/countryFlags'
 
 interface LatestResultsProps {
   data?: LatestResultsData // Optional prop for when we integrate with backend
 }
 
-export const LatestResults: React.FC<LatestResultsProps> = ({ data }) => {
-  // Use provided data or fall back to mock data
-  // TODO: Replace with API call when backend is ready
-  const resultsData = data || mockLatestResults
+export const LatestResults: React.FC<LatestResultsProps> = ({ data: propData }) => {
+  // Fetch latest results from API
+  const { data: apiData, isLoading, error } = useQuery<LatestResultsData>({
+    queryKey: ['latestResults'],
+    queryFn: getLatestResults,
+    staleTime: 1 * 60 * 1000, // 1 minute
+    retry: 1,
+  })
 
-  // Get country code for flag-icons (2-letter code)
-  const getCountryCode = (code: string): string => {
-    const codeMap: Record<string, string> = {
-      ARG: 'ar',
-      BRA: 'br',
-      URU: 'uy',
-      CHI: 'cl',
-      FRA: 'fr',
-      ENG: 'gb',
-      ESP: 'es',
-      GER: 'de',
-      USA: 'us',
-      MEX: 'mx',
-      CAN: 'ca',
-      CRC: 'cr',
-      NED: 'nl',
-      BEL: 'be',
-      POR: 'pt',
-      CRO: 'hr',
-      JPN: 'jp',
-      KOR: 'kr',
-      AUS: 'au',
-      IRN: 'ir',
-      MAR: 'ma',
-      SEN: 'sn',
-      EGY: 'eg',
-      NGA: 'ng',
-      ITA: 'it',
-      SUI: 'ch',
-      POL: 'pl',
-      TUR: 'tr',
-      DEN: 'dk',
-      SWE: 'se',
-      NOR: 'no',
-      FIN: 'fi',
-      COL: 'co',
-      ECU: 'ec',
-      PER: 'pe',
-      VEN: 've',
-      RUS: 'ru',
-      UKR: 'ua',
-      CZE: 'cz',
-      HUN: 'hu',
-      SAU: 'sa',
-      QAT: 'qa',
-      UAE: 'ae',
-      IRQ: 'iq',
-      NZL: 'nz',
-      TUN: 'tn',
-      CMR: 'cm',
-      GHA: 'gh',
-    }
-    return codeMap[code] || code.toLowerCase().slice(0, 2)
-  }
+  // Use provided data, API data, or fall back to mock data
+  const resultsData = propData || apiData || mockLatestResults
 
   const formatDate = (isoString: string): string => {
     const date = new Date(isoString)
@@ -73,6 +28,15 @@ export const LatestResults: React.FC<LatestResultsProps> = ({ data }) => {
       month: 'short',
       day: 'numeric',
     })
+  }
+
+  if (isLoading) {
+    return (
+      <div className="rounded-lg border border-neutral-DEFAULT/20 shadow-sm p-6" style={{ backgroundColor: '#FAF0CA' }}>
+        <h3 className="text-lg font-bold text-neutral-DEFAULT mb-4">Latest Results</h3>
+        <p className="text-neutral-DEFAULT/70">Loading...</p>
+      </div>
+    )
   }
 
   if (resultsData.matches.length === 0) {
@@ -110,7 +74,7 @@ export const LatestResults: React.FC<LatestResultsProps> = ({ data }) => {
               {/* Home Team */}
               <div className="flex items-center space-x-2 flex-1">
                 <span
-                  className={`fi fi-${getCountryCode(match.homeTeam.countryCode)} fis`}
+                  className={`fi fi-${getCountryCodeForFlag(match.homeTeam.countryCode)} fis`}
                   style={{ fontSize: '1.2rem' }}
                 ></span>
                 <span className="text-sm font-medium text-neutral-DEFAULT">
@@ -140,7 +104,7 @@ export const LatestResults: React.FC<LatestResultsProps> = ({ data }) => {
                   {abbreviateCountryName(match.awayTeam.name)}
                 </span>
                 <span
-                  className={`fi fi-${getCountryCode(match.awayTeam.countryCode)} fis`}
+                  className={`fi fi-${getCountryCodeForFlag(match.awayTeam.countryCode)} fis`}
                   style={{ fontSize: '1.2rem' }}
                 ></span>
               </div>

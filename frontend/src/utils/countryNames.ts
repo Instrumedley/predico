@@ -9,6 +9,8 @@ const countryAbbreviations: Record<string, string> = {
   'New Zealand': 'N. Zealand',
   'Czech Republic': 'Czechia',
   'South Korea': 'S. Korea',
+  'S. Africa': 'S. Africa',
+  'South Africa': 'S. Africa',
   'Saudi Arabia': 'Saudi Arabia', // Already short enough
   'Costa Rica': 'Costa Rica', // Already short enough
 }

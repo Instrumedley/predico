@@ -1,8 +1,8 @@
 """
 Game/Match model for World Cup matches.
 """
-from datetime import datetime
-from sqlalchemy import Column, Integer, DateTime, String, ForeignKey, Enum as SQLEnum, Boolean
+from datetime import datetime, date
+from sqlalchemy import Column, Integer, DateTime, Date, String, ForeignKey, Enum as SQLEnum, Boolean
 from sqlalchemy.orm import relationship
 import enum
 from app.db.database import Base
@@ -26,6 +26,7 @@ class Game(Base):
     home_team_id = Column(Integer, ForeignKey("teams.id"), nullable=False, index=True)
     away_team_id = Column(Integer, ForeignKey("teams.id"), nullable=False, index=True)
     scheduled_at = Column(DateTime, nullable=False, index=True)
+    match_date = Column(Date, nullable=True, index=True)  # Date of the match (without time)
     status = Column(SQLEnum(GameStatus), default=GameStatus.SCHEDULED, nullable=False, index=True)
     
     # Scores (null until game is finished)

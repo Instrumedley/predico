@@ -1,6 +1,7 @@
 """
 Alembic environment configuration for database migrations.
 """
+import os
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from sqlalchemy.engine import Connection
@@ -9,7 +10,6 @@ from alembic import context
 
 # Import your Base and models
 from app.db.database import Base
-from app.core.config import settings
 # Import all models so Alembic can detect them
 from app.db.models import (
     User,
@@ -28,10 +28,20 @@ from app.db.models import (
 # this is the Alembic Config object
 config = context.config
 
-# Set the database URL from settings
+# Set the database URL from settings or environment
 # Alembic needs a synchronous database URL (use psycopg2 instead of asyncpg)
-db_url = settings.DATABASE_URL.replace("+asyncpg", "+psycopg2")
-config.set_main_option("sqlalchemy.url", db_url)
+try:
+    from app.core.config import settings
+    db_url = settings.DATABASE_URL.replace("+asyncpg", "+psycopg2")
+except Exception:
+    # Fallback: try to get from environment or use default
+    db_url = os.getenv("DATABASE_URL", "postgresql+psycopg2://predico_user:predico_password@localhost:5432/predico_db")
+    if "+asyncpg" in db_url:
+        db_url = db_url.replace("+asyncpg", "+psycopg2")
+
+# Only set if not already set in alembic.ini
+if not config.get_main_option("sqlalchemy.url") or config.get_main_option("sqlalchemy.url") == "driver://user:pass@localhost/dbname":
+    config.set_main_option("sqlalchemy.url", db_url)
 
 # Interpret the config file for Python logging.
 if config.config_file_name is not None:
