@@ -13,7 +13,7 @@ interface User {
 interface AuthContextType {
   user: User | null
   loading: boolean
-  login: (email: string, password: string) => Promise<void>
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>
   signup: (email: string, password: string, username: string) => Promise<void>
   logout: () => Promise<void>
   isAuthenticated: boolean
@@ -27,19 +27,47 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     // Check if user is already logged in
-    const token = localStorage.getItem('access_token')
-    if (token) {
-      // TODO: Verify token and fetch user data
-      // For now, we'll just set loading to false
-      setLoading(false)
-    } else {
-      setLoading(false)
+    const restoreAuth = async () => {
+      try {
+        const token = localStorage.getItem('access_token')
+        const storedUser = localStorage.getItem('user_data')
+        
+        if (token && storedUser) {
+          try {
+            // Restore user from localStorage
+            const userData = JSON.parse(storedUser) as User
+            setUser(userData)
+            
+            // Optionally verify token with backend (for now we trust localStorage)
+            // If token is invalid, the API interceptor will handle it
+          } catch (error) {
+            // Invalid stored data, clear it
+            localStorage.removeItem('access_token')
+            localStorage.removeItem('user_data')
+          }
+        }
+      } finally {
+        setLoading(false)
+      }
     }
+    
+    restoreAuth()
   }, [])
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, rememberMe: boolean = false) => {
     const response: AuthResponse = await authService.login({ email, password })
+    
+    // Always store token and user data in localStorage for persistence on refresh
     localStorage.setItem('access_token', response.access_token)
+    localStorage.setItem('user_data', JSON.stringify(response.user))
+    
+    // Store rememberMe preference (can be used for future features like longer token expiration)
+    if (rememberMe) {
+      localStorage.setItem('remember_me', 'true')
+    } else {
+      localStorage.removeItem('remember_me')
+    }
+    
     setUser(response.user)
   }
 
@@ -51,6 +79,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = async () => {
     await authService.logout()
+    // Clear all auth-related data
+    localStorage.removeItem('user_data')
+    localStorage.removeItem('remember_me')
     setUser(null)
   }
 

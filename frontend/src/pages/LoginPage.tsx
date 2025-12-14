@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useForm } from 'react-hook-form'
@@ -8,6 +8,7 @@ import { z } from 'zod'
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(1, 'Password is required'),
+  rememberMe: z.boolean().optional().default(false),
 })
 
 type LoginFormData = z.infer<typeof loginSchema>
@@ -15,7 +16,7 @@ type LoginFormData = z.infer<typeof loginSchema>
 export const LoginPage: React.FC = () => {
   const [error, setError] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
-  const { login } = useAuth()
+  const { login, isAuthenticated, loading: authLoading } = useAuth()
   const navigate = useNavigate()
 
   const {
@@ -24,13 +25,37 @@ export const LoginPage: React.FC = () => {
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
+    defaultValues: {
+      rememberMe: false,
+    },
   })
+
+  // Redirect to dashboard if already authenticated
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [isAuthenticated, authLoading, navigate])
+
+  // Show loading state while checking authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-neutral-light">
+        <div className="text-neutral-DEFAULT">Loading...</div>
+      </div>
+    )
+  }
+
+  // Don't render login form if already authenticated (will redirect)
+  if (isAuthenticated) {
+    return null
+  }
 
   const onSubmit = async (data: LoginFormData) => {
     try {
       setError('')
       setIsLoading(true)
-      await login(data.email, data.password)
+      await login(data.email, data.password, data.rememberMe)
       navigate('/dashboard')
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Login failed. Please try again.')
@@ -102,6 +127,18 @@ export const LoginPage: React.FC = () => {
           </div>
 
           <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <input
+                {...register('rememberMe')}
+                id="rememberMe"
+                name="rememberMe"
+                type="checkbox"
+                className="h-4 w-4 text-primary-medium focus:ring-primary-medium border-neutral-DEFAULT rounded"
+              />
+              <label htmlFor="rememberMe" className="ml-2 block text-sm text-neutral-DEFAULT">
+                Remember me
+              </label>
+            </div>
             <div className="text-sm">
               <Link
                 to="/forgot-password"
