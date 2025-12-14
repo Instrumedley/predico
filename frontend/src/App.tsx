@@ -10,7 +10,10 @@ import {
   VerifyEmailPage,
   ForgotPasswordPage,
   ResetPasswordPage,
+  AdminPage,
+  NotFoundPage,
 } from '@/pages'
+import { AdminRoute } from '@/components/auth/AdminRoute'
 
 function App() {
   return (
@@ -34,6 +37,19 @@ function App() {
               </ProtectedRoute>
             }
           />
+          
+          {/* Admin routes */}
+          <Route
+            path="/adm"
+            element={
+              <AdminRoute>
+                <AdminPage />
+              </AdminRoute>
+            }
+          />
+          
+          {/* 404 page */}
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
         <Toaster />
       </AuthProvider>

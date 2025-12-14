@@ -35,6 +35,7 @@ class UserResponse(UserBase):
     """Schema for user response."""
     id: int
     is_active: bool
+    is_superuser: bool
     email_verified: bool
     created_at: datetime
     
