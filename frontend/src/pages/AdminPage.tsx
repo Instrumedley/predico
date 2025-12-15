@@ -5,7 +5,7 @@ import { GroupComponent } from '@/components/standings/GroupComponent'
 import { getStandings } from '@/services/standings'
 import { getGames } from '@/services/matches'
 import { getCountryCodeForFlag } from '@/utils/countryFlags'
-import { updateGameResult } from '@/services/admin'
+import { updateGameResult, resetGame } from '@/services/admin'
 import { Match } from '@/types/matches'
 
 interface GroupMatches {
@@ -15,6 +15,7 @@ interface GroupMatches {
 
 export const AdminPage: React.FC = () => {
   const [updatingGames, setUpdatingGames] = useState<Set<number>>(new Set())
+  const [resettingGames, setResettingGames] = useState<Set<number>>(new Set())
   const [scoreInputs, setScoreInputs] = useState<Record<number, { home: string; away: string }>>({})
 
   // Fetch standings to get groups
@@ -111,6 +112,34 @@ export const AdminPage: React.FC = () => {
     }
   }
 
+  const handleResetGame = async (game: Match) => {
+    if (!confirm(`Are you sure you want to reset this match? This will clear the result and reset all prediction scores for this match.`)) {
+      return
+    }
+
+    setResettingGames((prev) => new Set(prev).add(game.id))
+
+    try {
+      await resetGame(game.id)
+      // Refetch games to get updated data
+      await refetchGames()
+      // Update score inputs to reflect reset
+      setScoreInputs((prev) => ({
+        ...prev,
+        [game.id]: { home: '', away: '' },
+      }))
+      alert('Game reset successfully!')
+    } catch (error: any) {
+      alert(error.response?.data?.detail || 'Failed to reset game')
+    } finally {
+      setResettingGames((prev) => {
+        const newSet = new Set(prev)
+        newSet.delete(game.id)
+        return newSet
+      })
+    }
+  }
+
   if (standingsLoading || gamesLoading) {
     return (
       <div className="min-h-screen bg-neutral-light">
@@ -190,31 +219,33 @@ export const AdminPage: React.FC = () => {
                   {groupData.matches.map((match) => {
                     const inputs = scoreInputs[match.id] || { home: '', away: '' }
                     const isUpdating = updatingGames.has(match.id)
+                    const isResetting = resettingGames.has(match.id)
+                    const hasResult = match.status === 'finished' && match.homeScore !== undefined && match.awayScore !== undefined
 
                     return (
                       <div
                         key={match.id}
-                        className="flex items-center justify-between p-4 border border-neutral-DEFAULT/20 rounded-lg hover:bg-neutral-light/50 transition-colors"
+                        className="grid grid-cols-[1fr_auto_1fr_auto] items-center gap-4 p-4 border border-neutral-DEFAULT/20 rounded-lg hover:bg-neutral-light/50 transition-colors"
                       >
                         {/* Home Team */}
-                        <div className="flex items-center space-x-3 flex-1">
+                        <div className="flex items-center space-x-3">
                           <span
                             className={`fi fi-${getCountryCodeForFlag(match.homeTeam.countryCode)} fis`}
                             style={{ fontSize: '1.5rem' }}
                           ></span>
-                          <span className="font-medium text-neutral-DEFAULT min-w-[120px]">
+                          <span className="font-medium text-neutral-DEFAULT">
                             {match.homeTeam.name}
                           </span>
                         </div>
 
-                        {/* Score Inputs */}
-                        <div className="flex items-center space-x-2 mx-4">
+                        {/* Score Inputs - Fixed width, always centered */}
+                        <div className="flex items-center space-x-2 justify-center">
                           <input
                             type="number"
                             min="0"
                             value={inputs.home}
                             onChange={(e) => handleScoreChange(match.id, 'home', e.target.value)}
-                            disabled={isUpdating}
+                            disabled={isUpdating || isResetting}
                             className="w-16 px-2 py-1 border border-neutral-DEFAULT/20 rounded text-center text-neutral-DEFAULT focus:outline-none focus:ring-2 focus:ring-primary-medium disabled:opacity-50"
                             placeholder="0"
                           />
@@ -224,15 +255,15 @@ export const AdminPage: React.FC = () => {
                             min="0"
                             value={inputs.away}
                             onChange={(e) => handleScoreChange(match.id, 'away', e.target.value)}
-                            disabled={isUpdating}
+                            disabled={isUpdating || isResetting}
                             className="w-16 px-2 py-1 border border-neutral-DEFAULT/20 rounded text-center text-neutral-DEFAULT focus:outline-none focus:ring-2 focus:ring-primary-medium disabled:opacity-50"
                             placeholder="0"
                           />
                         </div>
 
                         {/* Away Team */}
-                        <div className="flex items-center space-x-3 flex-1 justify-end">
-                          <span className="font-medium text-neutral-DEFAULT min-w-[120px] text-right">
+                        <div className="flex items-center space-x-3 justify-end">
+                          <span className="font-medium text-neutral-DEFAULT text-right">
                             {match.awayTeam.name}
                           </span>
                           <span
@@ -241,15 +272,24 @@ export const AdminPage: React.FC = () => {
                           ></span>
                         </div>
 
-                        {/* Update Button */}
-                        <div className="ml-4">
+                        {/* Buttons - Fixed width container to prevent layout shift */}
+                        <div className="flex items-center space-x-2 w-[180px] justify-end">
                           <button
                             onClick={() => handleUpdateGame(match)}
-                            disabled={isUpdating || !inputs.home || !inputs.away}
+                            disabled={isUpdating || isResetting || !inputs.home || !inputs.away}
                             className="px-4 py-2 bg-primary-medium text-white rounded-md hover:bg-primary-DEFAULT focus:outline-none focus:ring-2 focus:ring-primary-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
                             {isUpdating ? 'Updating...' : 'Update'}
                           </button>
+                          {hasResult && (
+                            <button
+                              onClick={() => handleResetGame(match)}
+                              disabled={isUpdating || isResetting}
+                              className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                              {isResetting ? 'Resetting...' : 'Reset'}
+                            </button>
+                          )}
                         </div>
                       </div>
                     )
