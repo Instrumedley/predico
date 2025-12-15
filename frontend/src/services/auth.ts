@@ -21,6 +21,9 @@ export interface AuthResponse {
     id: number
     email: string
     username: string
+    is_superuser: boolean
+    is_active: boolean
+    email_verified: boolean
   }
 }
 
@@ -72,6 +75,25 @@ export const authService = {
       token,
       new_password: newPassword,
     })
+    return response.data
+  },
+
+  async getCurrentUser(): Promise<{
+    id: number
+    email: string
+    username: string
+    is_superuser: boolean
+    is_active: boolean
+    email_verified: boolean
+  }> {
+    const response = await apiClient.get<{
+      id: number
+      email: string
+      username: string
+      is_superuser: boolean
+      is_active: boolean
+      email_verified: boolean
+    }>('/api/v1/users/me')
     return response.data
   },
 }

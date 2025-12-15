@@ -44,6 +44,26 @@ export const NavBar: React.FC = () => {
             <span className="ml-3 text-xl font-bold text-neutral-DEFAULT">Predico</span>
           </div>
 
+          {/* Navigation Links */}
+          <div className="flex items-center space-x-4">
+            {user && (
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="px-3 py-2 text-neutral-DEFAULT hover:text-primary-medium transition-colors"
+              >
+                Dashboard
+              </button>
+            )}
+            {user?.is_superuser && (
+              <button
+                onClick={() => navigate('/adm')}
+                className="px-3 py-2 text-neutral-DEFAULT hover:text-primary-medium transition-colors"
+              >
+                Admin
+              </button>
+            )}
+          </div>
+
           {/* User Menu */}
           <div className="relative" ref={menuRef}>
             <button

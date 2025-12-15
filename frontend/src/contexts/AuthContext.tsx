@@ -8,6 +8,7 @@ interface User {
   id: number
   email: string
   username: string
+  is_superuser?: boolean
 }
 
 interface AuthContextType {
@@ -17,6 +18,8 @@ interface AuthContextType {
   signup: (email: string, password: string, username: string) => Promise<void>
   logout: () => Promise<void>
   isAuthenticated: boolean
+  isAdmin: boolean
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -24,6 +27,22 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  
+  // Refresh user data from backend
+  const refreshUser = async () => {
+    try {
+      const { authService } = await import('@/services/auth')
+      const userData = await authService.getCurrentUser()
+      setUser(userData)
+      localStorage.setItem('user_data', JSON.stringify(userData))
+    } catch (error) {
+      // If refresh fails, clear auth data
+      localStorage.removeItem('access_token')
+      localStorage.removeItem('user_data')
+      setUser(null)
+      throw error
+    }
+  }
 
   useEffect(() => {
     // Check if user is already logged in
@@ -38,8 +57,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const userData = JSON.parse(storedUser) as User
             setUser(userData)
             
-            // Optionally verify token with backend (for now we trust localStorage)
-            // If token is invalid, the API interceptor will handle it
+            // Refresh user data from backend to get latest info (including is_superuser)
+            try {
+              await refreshUser()
+            } catch (error) {
+              // If refresh fails, keep localStorage data but log error
+              console.warn('Failed to refresh user data, using cached data')
+            }
           } catch (error) {
             // Invalid stored data, clear it
             localStorage.removeItem('access_token')
@@ -52,6 +76,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
     
     restoreAuth()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const login = async (email: string, password: string, rememberMe: boolean = false) => {
@@ -69,6 +94,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
     
     setUser(response.user)
+    
+    // Refresh user data to get latest info including is_superuser
+    try {
+      await refreshUser()
+    } catch (error) {
+      // If refresh fails, use the data from login response
+      console.warn('Failed to refresh user data after login')
+    }
   }
 
   const signup = async (email: string, password: string, username: string) => {
@@ -94,6 +127,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         signup,
         logout,
         isAuthenticated: !!user,
+        isAdmin: !!user?.is_superuser,
+        refreshUser,
       }}
     >
       {children}

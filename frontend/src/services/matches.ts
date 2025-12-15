@@ -93,7 +93,7 @@ function transformMatchResponse(match: ApiMatchResponse): Match {
     group: match.group
       ? {
           id: match.group.id,
-          letter: match.group.name.replace('Group ', ''),
+          letter: match.group.name.replace(/^Group\s+/i, '').trim(),
         }
       : undefined,
     matchNumber: match.match_number ?? undefined,
