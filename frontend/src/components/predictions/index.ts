@@ -1,0 +1,1 @@
+export { PredictionRowCard } from './PredictionRowCard'
