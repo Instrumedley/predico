@@ -1,10 +1,13 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
+import { Feedback } from '@/components/ui/Feedback'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { FeedbackProvider } from '@/contexts/FeedbackContext'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import {
   HomePage,
   DashboardPage,
+  ScorecardPage,
   LoginPage,
   SignupPage,
   VerifyEmailPage,
@@ -19,7 +22,8 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
+        <FeedbackProvider>
+          <Routes>
           {/* Public routes */}
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
@@ -34,6 +38,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/scorecard"
+            element={
+              <ProtectedRoute>
+                <ScorecardPage />
               </ProtectedRoute>
             }
           />
@@ -52,6 +64,8 @@ function App() {
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
         <Toaster />
+        <Feedback />
+      </FeedbackProvider>
       </AuthProvider>
     </BrowserRouter>
   )

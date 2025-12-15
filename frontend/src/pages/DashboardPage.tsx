@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { NavBar, MiniMenu, DeadlineCard } from '@/components/layout'
 import { GroupStandingsComponent } from '@/components/standings'
 import { NextMatch, LatestResults } from '@/components/matches'
@@ -6,7 +7,15 @@ import { NextMatch, LatestResults } from '@/components/matches'
 type MenuOption = 'dashboard' | 'scorecard' | 'leagues'
 
 export const DashboardPage: React.FC = () => {
+  const navigate = useNavigate()
   const [activeMenuOption, setActiveMenuOption] = useState<MenuOption>('dashboard')
+
+  const handleMenuOptionChange = (option: MenuOption) => {
+    setActiveMenuOption(option)
+    if (option === 'scorecard') {
+      navigate('/scorecard')
+    }
+  }
 
   return (
     <div className="min-h-screen bg-neutral-light">
@@ -16,7 +25,7 @@ export const DashboardPage: React.FC = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Mini Menu */}
-        <MiniMenu activeOption={activeMenuOption} onOptionChange={setActiveMenuOption} />
+        <MiniMenu activeOption={activeMenuOption} onOptionChange={handleMenuOptionChange} />
 
         {/* Deadline Card */}
         <DeadlineCard roundNumber={13} />
