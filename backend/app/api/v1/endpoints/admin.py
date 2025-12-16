@@ -8,7 +8,7 @@ from sqlalchemy.orm import selectinload
 from pydantic import BaseModel
 
 from app.db.database import get_db
-from app.db.models import Game, User
+from app.db.models import Game, User, Prediction
 from app.db.models.game import GameStatus
 from app.core.security import get_current_user
 
@@ -112,4 +112,66 @@ async def trigger_score_calculation_events(game: Game, db: AsyncSession):
     
     # For now, do nothing - this will be implemented later
     pass
+
+
+@router.post("/games/{game_id}/reset", response_model=dict)
+async def reset_game(
+    game_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(require_admin)
+):
+    """
+    Reset a game to its original state (no result, status = scheduled).
+    This will:
+    1. Reset game status to SCHEDULED (Upcoming)
+    2. Clear game scores (set to None)
+    3. Reset all predictions for this game (points = 0, is_calculated = False)
+    4. Group standings will automatically recalculate when queried (only FINISHED games count)
+    
+    Only accessible by admin users.
+    """
+    # Get the game
+    query = select(Game).where(Game.id == game_id).options(
+        selectinload(Game.home_team),
+        selectinload(Game.away_team),
+        selectinload(Game.group),
+        selectinload(Game.round)
+    )
+    result_query = await db.execute(query)
+    game = result_query.scalar_one_or_none()
+    
+    if not game:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Game with id {game_id} not found"
+        )
+    
+    # Reset game status and scores
+    game.status = GameStatus.SCHEDULED
+    game.home_score = None
+    game.away_score = None
+    game.home_penalty_score = None
+    game.away_penalty_score = None
+    
+    # Get all predictions for this game and reset them
+    predictions_query = select(Prediction).where(Prediction.game_id == game_id)
+    predictions_result = await db.execute(predictions_query)
+    predictions = predictions_result.scalars().all()
+    
+    for prediction in predictions:
+        prediction.points = 0
+        prediction.exact_score_points = 0
+        prediction.correct_result_points = 0
+        prediction.correct_goal_difference_points = 0
+        prediction.is_calculated = False
+    
+    await db.commit()
+    await db.refresh(game)
+    
+    return {
+        "message": "Game reset successfully",
+        "game_id": game.id,
+        "status": game.status.value,
+        "predictions_reset": len(predictions)
+    }
 
