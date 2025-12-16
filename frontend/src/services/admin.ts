@@ -56,3 +56,22 @@ export async function resetGame(gameId: number): Promise<ResetGameResponse> {
   return response.data
 }
 
+export interface ResetAllGamesResponse {
+  message: string
+  games_reset: number
+  predictions_reset: number
+}
+
+/**
+ * Reset all games to their original state (no results, status = scheduled).
+ * This will reset all game statuses, clear all scores, and reset all predictions.
+ * This brings the system back to the initial state.
+ * Only accessible by admin users.
+ */
+export async function resetAllGames(): Promise<ResetAllGamesResponse> {
+  const response = await apiClient.post<ResetAllGamesResponse>(
+    `${API_PREFIX}/admin/games/reset-all`
+  )
+  return response.data
+}
+

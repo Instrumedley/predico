@@ -3,6 +3,7 @@ import { Toaster } from '@/components/ui/toaster'
 import { Feedback } from '@/components/ui/Feedback'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { FeedbackProvider } from '@/contexts/FeedbackContext'
+import { ModalProvider } from '@/contexts/ModalContext'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import {
   HomePage,
@@ -23,7 +24,8 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <FeedbackProvider>
-          <Routes>
+          <ModalProvider>
+            <Routes>
           {/* Public routes */}
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
@@ -62,10 +64,11 @@ function App() {
           
           {/* 404 page */}
           <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-        <Toaster />
-        <Feedback />
-      </FeedbackProvider>
+            </Routes>
+            <Toaster />
+            <Feedback />
+          </ModalProvider>
+        </FeedbackProvider>
       </AuthProvider>
     </BrowserRouter>
   )

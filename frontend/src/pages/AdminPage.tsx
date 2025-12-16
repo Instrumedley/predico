@@ -5,8 +5,10 @@ import { GroupComponent } from '@/components/standings/GroupComponent'
 import { getStandings } from '@/services/standings'
 import { getGames } from '@/services/matches'
 import { getCountryCodeForFlag } from '@/utils/countryFlags'
-import { updateGameResult, resetGame } from '@/services/admin'
+import { updateGameResult, resetGame, resetAllGames } from '@/services/admin'
 import { Match } from '@/types/matches'
+import { useModal } from '@/contexts/ModalContext'
+import { useFeedback } from '@/contexts/FeedbackContext'
 
 interface GroupMatches {
   groupLetter: string
@@ -14,8 +16,11 @@ interface GroupMatches {
 }
 
 export const AdminPage: React.FC = () => {
+  const { showConfirm } = useModal()
+  const { showFeedback } = useFeedback()
   const [updatingGames, setUpdatingGames] = useState<Set<number>>(new Set())
   const [resettingGames, setResettingGames] = useState<Set<number>>(new Set())
+  const [resettingAll, setResettingAll] = useState(false)
   const [scoreInputs, setScoreInputs] = useState<Record<number, { home: string; away: string }>>({})
 
   // Fetch standings to get groups
@@ -90,7 +95,7 @@ export const AdminPage: React.FC = () => {
     const awayScore = parseInt(inputs.away, 10)
 
     if (isNaN(homeScore) || isNaN(awayScore)) {
-      alert('Please enter valid scores for both teams')
+      showFeedback('Please enter valid scores for both teams', 'error')
       return
     }
 
@@ -100,9 +105,9 @@ export const AdminPage: React.FC = () => {
       await updateGameResult(game.id, homeScore, awayScore)
       // Refetch games to get updated data
       await refetchGames()
-      alert('Game result updated successfully!')
+      showFeedback('Game result updated successfully!', 'success')
     } catch (error: any) {
-      alert(error.response?.data?.detail || 'Failed to update game result')
+      showFeedback(error.response?.data?.detail || 'Failed to update game result', 'error')
     } finally {
       setUpdatingGames((prev) => {
         const newSet = new Set(prev)
@@ -113,31 +118,63 @@ export const AdminPage: React.FC = () => {
   }
 
   const handleResetGame = async (game: Match) => {
-    if (!confirm(`Are you sure you want to reset this match? This will clear the result and reset all prediction scores for this match.`)) {
-      return
-    }
+    showConfirm(
+      'Reset Match',
+      `Are you sure you want to reset this match? This will clear the result and reset all prediction scores for this match.`,
+      async () => {
+        setResettingGames((prev) => new Set(prev).add(game.id))
 
-    setResettingGames((prev) => new Set(prev).add(game.id))
+        try {
+          await resetGame(game.id)
+          // Refetch games to get updated data
+          await refetchGames()
+          // Update score inputs to reflect reset
+          setScoreInputs((prev) => ({
+            ...prev,
+            [game.id]: { home: '', away: '' },
+          }))
+          showFeedback('Game reset successfully!', 'success')
+        } catch (error: any) {
+          showFeedback(error.response?.data?.detail || 'Failed to reset game', 'error')
+        } finally {
+          setResettingGames((prev) => {
+            const newSet = new Set(prev)
+            newSet.delete(game.id)
+            return newSet
+          })
+        }
+      },
+      'Reset',
+      'Cancel'
+    )
+  }
 
-    try {
-      await resetGame(game.id)
-      // Refetch games to get updated data
-      await refetchGames()
-      // Update score inputs to reflect reset
-      setScoreInputs((prev) => ({
-        ...prev,
-        [game.id]: { home: '', away: '' },
-      }))
-      alert('Game reset successfully!')
-    } catch (error: any) {
-      alert(error.response?.data?.detail || 'Failed to reset game')
-    } finally {
-      setResettingGames((prev) => {
-        const newSet = new Set(prev)
-        newSet.delete(game.id)
-        return newSet
-      })
-    }
+  const handleResetAllGames = () => {
+    showConfirm(
+      'Reset All Matches',
+      'Are you sure you want to reset ALL matches? This will clear all results, reset all prediction scores, and bring the system back to the initial state. This action cannot be undone.',
+      async () => {
+        setResettingAll(true)
+
+        try {
+          const result = await resetAllGames()
+          // Refetch games to get updated data
+          await refetchGames()
+          // Reset all score inputs
+          setScoreInputs({})
+          showFeedback(
+            `All matches reset successfully! ${result.games_reset} games and ${result.predictions_reset} predictions were reset.`,
+            'success'
+          )
+        } catch (error: any) {
+          showFeedback(error.response?.data?.detail || 'Failed to reset all games', 'error')
+        } finally {
+          setResettingAll(false)
+        }
+      },
+      'Reset All',
+      'Cancel'
+    )
   }
 
   if (standingsLoading || gamesLoading) {
@@ -155,11 +192,20 @@ export const AdminPage: React.FC = () => {
     <div className="min-h-screen bg-neutral-light">
       <NavBar />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-neutral-DEFAULT">Admin Panel</h1>
-          <p className="text-sm text-neutral-DEFAULT/70 mt-2">
-            Update match results for the 2026 FIFA World Cup
-          </p>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-neutral-DEFAULT">Admin Panel</h1>
+            <p className="text-sm text-neutral-DEFAULT/70 mt-2">
+              Update match results for the 2026 FIFA World Cup
+            </p>
+          </div>
+          <button
+            onClick={handleResetAllGames}
+            disabled={resettingAll}
+            className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+          >
+            {resettingAll ? 'Resetting...' : 'Reset All Matches !'}
+          </button>
         </div>
 
         {gamesByGroup.length === 0 && !standingsLoading && !gamesLoading && (

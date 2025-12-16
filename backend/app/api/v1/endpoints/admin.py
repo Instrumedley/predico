@@ -175,3 +175,58 @@ async def reset_game(
         "predictions_reset": len(predictions)
     }
 
+
+@router.post("/games/reset-all", response_model=dict)
+async def reset_all_games(
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(require_admin)
+):
+    """
+    Reset all games to their original state (no results, status = scheduled).
+    This will:
+    1. Reset all game statuses to SCHEDULED (Upcoming)
+    2. Clear all game scores (set to None)
+    3. Reset all predictions (points = 0, is_calculated = False)
+    4. Group standings will automatically recalculate when queried (only FINISHED games count)
+    
+    This brings the system back to the initial state.
+    Only accessible by admin users.
+    """
+    # Get all games
+    games_query = select(Game)
+    games_result = await db.execute(games_query)
+    games = games_result.scalars().all()
+    
+    games_reset = 0
+    
+    # Reset all games
+    for game in games:
+        game.status = GameStatus.SCHEDULED
+        game.home_score = None
+        game.away_score = None
+        game.home_penalty_score = None
+        game.away_penalty_score = None
+        games_reset += 1
+    
+    # Get all predictions and reset them
+    predictions_query = select(Prediction)
+    predictions_result = await db.execute(predictions_query)
+    predictions = predictions_result.scalars().all()
+    
+    predictions_reset = 0
+    for prediction in predictions:
+        prediction.points = 0
+        prediction.exact_score_points = 0
+        prediction.correct_result_points = 0
+        prediction.correct_goal_difference_points = 0
+        prediction.is_calculated = False
+        predictions_reset += 1
+    
+    await db.commit()
+    
+    return {
+        "message": "All games reset successfully",
+        "games_reset": games_reset,
+        "predictions_reset": predictions_reset
+    }
+
