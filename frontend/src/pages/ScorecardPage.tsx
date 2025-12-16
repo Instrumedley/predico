@@ -245,3 +245,4 @@ export const ScorecardPage: React.FC = () => {
     </div>
   )
 }
+

@@ -330,3 +330,4 @@ export const PredictionRowCard: React.FC<PredictionRowCardProps> = ({
     </div>
   )
 }
+

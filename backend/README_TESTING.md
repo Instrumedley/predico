@@ -117,3 +117,4 @@ tests/test_scoring.py::TestCalculatePredictionPoints::test_correct_outcome_and_h
 ============================= 15 passed in 2.34s ==============================
 ```
 
+

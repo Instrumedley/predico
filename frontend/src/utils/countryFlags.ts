@@ -120,3 +120,4 @@ export function getCountryCodeForFlag(code: string): string {
   return code.toLowerCase().slice(0, 2)
 }
 
+
