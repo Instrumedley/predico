@@ -63,17 +63,21 @@ export const AdminPage: React.FC = () => {
     return grouped
   }, [games, standingsData])
 
-  // Initialize score inputs from existing game data
   React.useEffect(() => {
     if (games) {
-      const inputs: Record<number, { home: string; away: string }> = {}
-      games.forEach((game) => {
-        inputs[game.id] = {
-          home: game.homeScore?.toString() || '',
-          away: game.awayScore?.toString() || '',
-        }
+      setScoreInputs((prev) => {
+        const updated = { ...prev }
+        games.forEach((game) => {
+          // Only initialize if this game doesn't have input yet (preserves user's unsaved changes)
+          if (!updated[game.id]) {
+            updated[game.id] = {
+              home: game.homeScore?.toString() || '',
+              away: game.awayScore?.toString() || '',
+            }
+          }
+        })
+        return updated
       })
-      setScoreInputs(inputs)
     }
   }, [games])
 
@@ -103,8 +107,20 @@ export const AdminPage: React.FC = () => {
 
     try {
       await updateGameResult(game.id, homeScore, awayScore)
-      // Refetch games to get updated data
-      await refetchGames()
+      const result = await refetchGames()
+
+      if (result.data) {
+        const updatedGame = result.data.find((g) => g.id === game.id)
+        if (updatedGame) {
+          setScoreInputs((prev) => ({
+            ...prev,
+            [game.id]: {
+              home: updatedGame.homeScore?.toString() || '',
+              away: updatedGame.awayScore?.toString() || '',
+            },
+          }))
+        }
+      }
       showFeedback('Game result updated successfully!', 'success')
     } catch (error: any) {
       showFeedback(error.response?.data?.detail || 'Failed to update game result', 'error')
