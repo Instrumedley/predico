@@ -16,6 +16,8 @@ export interface Match {
   awayTeam: Team
   scheduledAt: string // ISO datetime string
   matchDate?: string // ISO date string
+  matchTime?: string // Time string (HH:MM:SS)
+  timezone?: string // Timezone string (e.g., "UTC-5")
   status: 'scheduled' | 'live' | 'finished' | 'cancelled' | 'postponed'
   homeScore?: number
   awayScore?: number

@@ -5,8 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_
 from sqlalchemy.orm import selectinload
-from datetime import datetime, date
+from datetime import datetime, date, time, timedelta
 from typing import List, Optional
+import re
 
 from app.db.database import get_db
 from app.db.models import Game, Team, Round, Group, Stadium
@@ -58,6 +59,8 @@ class GameResponse(BaseModel):
     away_team: TeamResponse
     scheduled_at: datetime
     match_date: Optional[date] = None
+    match_time: Optional[str] = None  # Time as string (HH:MM:SS)
+    timezone: Optional[str] = None  # Timezone string (e.g., "UTC-5")
     status: str
     home_score: Optional[int] = None
     away_score: Optional[int] = None
@@ -71,6 +74,29 @@ class GameResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+def game_to_response(game: Game) -> GameResponse:
+    """Convert Game model to GameResponse, handling time serialization."""
+    return GameResponse(
+        id=game.id,
+        home_team=TeamResponse.model_validate(game.home_team),
+        away_team=TeamResponse.model_validate(game.away_team),
+        scheduled_at=game.scheduled_at,
+        match_date=game.match_date,
+        match_time=game.match_time.strftime('%H:%M:%S') if game.match_time else None,
+        timezone=game.timezone,
+        status=game.status.value,
+        home_score=game.home_score,
+        away_score=game.away_score,
+        home_penalty_score=game.home_penalty_score,
+        away_penalty_score=game.away_penalty_score,
+        stadium=StadiumResponse.model_validate(game.stadium) if game.stadium else None,
+        round=RoundResponse.model_validate(game.round),
+        group=GroupResponse.model_validate(game.group) if game.group else None,
+        is_knockout=game.is_knockout,
+        match_number=game.match_number,
+    )
 
 
 @router.get("", response_model=List[GameResponse])
@@ -119,16 +145,54 @@ async def get_games(
     result = await db.execute(query)
     games = result.scalars().all()
     
-    return games
+    return [game_to_response(game) for game in games]
+
+
+def parse_timezone_offset(timezone_str: str) -> int:
+    """
+    Parse timezone string like "UTC-5" or "UTC+3" to offset in hours.
+    Returns offset in hours (e.g., -5 for UTC-5, +3 for UTC+3).
+    """
+    if not timezone_str:
+        return 0
+    
+    # Remove "UTC" prefix and parse the offset
+    match = re.match(r'UTC([+-]?\d+)', timezone_str.strip(), re.IGNORECASE)
+    if match:
+        return int(match.group(1))
+    return 0
+
+
+def get_match_datetime_utc(match_date: date, match_time: Optional[time], timezone_str: Optional[str]) -> Optional[datetime]:
+    """
+    Convert match date, time, and timezone to UTC datetime.
+    Returns None if match_date, match_time, or timezone is missing.
+    """
+    if not match_date or not match_time or not timezone_str:
+        return None
+    
+    # Parse timezone offset
+    tz_offset_hours = parse_timezone_offset(timezone_str)
+    
+    # Create datetime in local timezone
+    local_datetime = datetime.combine(match_date, match_time)
+    
+    # Convert to UTC by subtracting the offset
+    # If timezone is UTC-5, we need to add 5 hours to get UTC
+    utc_datetime = local_datetime.replace(tzinfo=None) - timedelta(hours=tz_offset_hours)
+    
+    return utc_datetime
 
 
 @router.get("/next", response_model=GameResponse)
 async def get_next_game(db: AsyncSession = Depends(get_db)):
     """
-    Get the next scheduled game.
+    Get the next scheduled game based on match_date, match_time, and timezone.
+    Falls back to scheduled_at if match_time/timezone are not available.
     """
     now = datetime.utcnow()
     
+    # Get all scheduled games
     query = select(Game).options(
         selectinload(Game.home_team),
         selectinload(Game.away_team),
@@ -136,22 +200,43 @@ async def get_next_game(db: AsyncSession = Depends(get_db)):
         selectinload(Game.round),
         selectinload(Game.group)
     ).where(
-        and_(
-            Game.status == GameStatus.SCHEDULED,
-            Game.scheduled_at >= now
-        )
-    ).order_by(Game.scheduled_at.asc()).limit(1)
+        Game.status == GameStatus.SCHEDULED
+    )
     
     result = await db.execute(query)
-    game = result.scalar_one_or_none()
+    all_games = result.scalars().all()
     
-    if not game:
+    if not all_games:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No upcoming games found"
         )
     
-    return game
+    # Find the next game by comparing UTC datetimes
+    next_game = None
+    next_datetime = None
+    
+    for game in all_games:
+        # Try to use match_date, match_time, and timezone first
+        if game.match_date and game.match_time and game.timezone:
+            match_utc = get_match_datetime_utc(game.match_date, game.match_time, game.timezone)
+            if match_utc and match_utc > now:
+                if next_datetime is None or match_utc < next_datetime:
+                    next_datetime = match_utc
+                    next_game = game
+        # Fallback to scheduled_at
+        elif game.scheduled_at and game.scheduled_at > now:
+            if next_datetime is None or game.scheduled_at < next_datetime:
+                next_datetime = game.scheduled_at
+                next_game = game
+    
+    if not next_game:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No upcoming games found"
+        )
+    
+    return game_to_response(next_game)
 
 
 @router.get("/latest", response_model=List[GameResponse])
@@ -175,7 +260,7 @@ async def get_latest_games(
     result = await db.execute(query)
     games = result.scalars().all()
     
-    return games
+    return [game_to_response(game) for game in games]
 
 
 @router.get("/{game_id}", response_model=GameResponse)
@@ -200,5 +285,5 @@ async def get_game(game_id: int, db: AsyncSession = Depends(get_db)):
             detail=f"Game with id {game_id} not found"
         )
     
-    return game
+    return game_to_response(game)
 

@@ -28,7 +28,7 @@ export const DashboardPage: React.FC = () => {
         <MiniMenu activeOption={activeMenuOption} onOptionChange={handleMenuOptionChange} />
 
         {/* Deadline Card */}
-        <DeadlineCard roundNumber={13} />
+        <DeadlineCard />
 
         {/* Group Stage Standings */}
         <div className="mt-8">
