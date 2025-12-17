@@ -40,6 +40,8 @@ interface ApiMatchResponse {
   away_team: ApiTeam
   scheduled_at: string
   match_date?: string | null
+  match_time?: string | null // Time string (HH:MM:SS)
+  timezone?: string | null // Timezone string (e.g., "UTC-5")
   status: 'scheduled' | 'live' | 'finished' | 'cancelled' | 'postponed'
   home_score?: number | null
   away_score?: number | null
@@ -71,6 +73,8 @@ function transformMatchResponse(match: ApiMatchResponse): Match {
     },
     scheduledAt: match.scheduled_at,
     matchDate: match.match_date ?? undefined,
+    matchTime: match.match_time ?? undefined,
+    timezone: match.timezone ?? undefined,
     status: match.status,
     homeScore: match.home_score ?? undefined,
     awayScore: match.away_score ?? undefined,
