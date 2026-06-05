@@ -1,0 +1,9 @@
+*.md
+.pytest_cache/
+.mypy_cache/
+__pycache__/
+tests/
+email_logs/
+.env
+.env.*
+!.env.heroku.example

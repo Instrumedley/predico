@@ -25,7 +25,15 @@ class Round(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False, unique=True, index=True)  # e.g., "Group A", "Round of 16"
-    round_type = Column(SQLEnum(RoundType), nullable=False, index=True)
+    round_type = Column(
+        SQLEnum(
+            RoundType,
+            name="roundtype",
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
+        nullable=False,
+        index=True,
+    )
     order = Column(Integer, nullable=False, index=True)  # Order in tournament (1=Group Stage, 2=Round of 16, etc.)
     
     # Relationships

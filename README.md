@@ -11,10 +11,9 @@ This project is designed to handle millions of users with high traffic during th
 - **Backend**: Python 3.11 + FastAPI (async)
 - **Frontend**: TypeScript + React 18 + Vite
 - **Database**: PostgreSQL 15
-- **Cache**: Redis 7
-- **Infrastructure**: AWS (ECS Fargate, RDS, ElastiCache, ALB, S3, CloudFront)
-- **IaC**: Terraform
-- **Containerization**: Docker
+- **Cache**: Redis 7 (local dev only; optional)
+- **Production**: Heroku (API + Postgres) + Vercel (frontend)
+- **Local**: Docker Compose
 
 ### Architecture Components
 
@@ -72,15 +71,11 @@ predico/
 │   │   └── utils/         # Utility functions
 │   └── package.json
 │
-├── infrastructure/         # Terraform IaC
+├── infrastructure/         # Archived AWS Terraform (see infrastructure/README.md)
 │   └── terraform/
-│       ├── main.tf        # Main configuration
-│       ├── vpc.tf         # VPC and networking
-│       ├── rds.tf         # PostgreSQL database
-│       ├── ecs.tf         # ECS cluster and services
-│       ├── alb.tf         # Application Load Balancer
-│       ├── s3.tf          # S3 and CloudFront
-│       └── redis.tf       # ElastiCache Redis
+│
+├── docs/
+│   └── HEROKU.md           # Production deployment guide
 │
 └── docker-compose.yml      # Local development setup
 ```
@@ -170,61 +165,15 @@ alembic upgrade head
 alembic downgrade -1
 ```
 
-## 🏗️ Infrastructure Deployment
+## 🚀 Production deployment
 
-### Prerequisites
+Production runs on **Heroku** (API) and **Vercel** (frontend), ~$12/month.
 
-- AWS CLI configured
-- Terraform >= 1.5.0
-- AWS account with appropriate permissions
+See **[docs/HEROKU.md](docs/HEROKU.md)** for step-by-step setup: Procfile, config vars, SendGrid email, and frontend deploy.
 
-### Deploy Infrastructure
+Local staging uses `docker-compose.yml`. AWS Terraform in `infrastructure/` is archived and not used.
 
-1. **Navigate to Terraform directory**
-   ```bash
-   cd infrastructure/terraform
-   ```
-
-2. **Configure variables**
-   ```bash
-   cp terraform.tfvars.example terraform.tfvars
-   # Edit terraform.tfvars with your values
-   ```
-
-3. **Initialize Terraform**
-   ```bash
-   terraform init
-   ```
-
-4. **Plan deployment**
-   ```bash
-   terraform plan
-   ```
-
-5. **Apply infrastructure**
-   ```bash
-   terraform apply
-   ```
-
-### Deploy Application
-
-1. **Build and push Docker images to ECR**
-   ```bash
-   # Backend
-   aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <account-id>.dkr.ecr.us-east-1.amazonaws.com
-   docker build -t predico-backend ./backend
-   docker tag predico-backend:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/predico-backend:latest
-   docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/predico-backend:latest
-   
-   # Frontend
-   docker build -t predico-frontend ./frontend
-   docker tag predico-frontend:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/predico-frontend:latest
-   docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/predico-frontend:latest
-   ```
-
-2. **Update ECS services** (Terraform will create ECS task definitions - you'll need to create services separately or add them to Terraform)
-
-## 📊 Scalability Features
+## 📊 Scalability (future)
 
 - **Horizontal Scaling**: ECS Fargate with auto-scaling based on CPU/memory metrics
 - **Database**: RDS with read replicas capability and connection pooling

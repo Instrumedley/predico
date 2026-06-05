@@ -1,8 +1,9 @@
 """
-Email service with support for local development and AWS SES.
+Email service with support for local development, AWS SES, and SendGrid.
 
 For local development, emails are logged to console and optionally saved to files.
-For production, emails are sent via AWS SES.
+For Heroku production, emails are sent via SendGrid (SendGrid add-on).
+For AWS deployments, emails can be sent via AWS SES.
 """
 import asyncio
 import boto3
@@ -18,22 +19,24 @@ logger = structlog.get_logger(__name__)
 
 
 class EmailService:
-    """Service for sending emails via AWS SES or local development."""
+    """Service for sending emails via SendGrid, AWS SES, or local development."""
     
     def __init__(self):
         """Initialize email service."""
+        self.environment = settings.ENVIRONMENT
         self.email_enabled = settings.EMAIL_ENABLED
         self.email_backend = settings.EMAIL_BACKEND
         self.from_email = settings.SES_FROM_EMAIL
         self.frontend_url = settings.FRONTEND_URL
-        
+        self.sendgrid_api_key = settings.SENDGRID_API_KEY or os.getenv("SENDGRID_API_KEY")
+
         # Initialize Jinja2 template environment
         template_dir = Path(__file__).parent.parent / "templates" / "emails"
         self.jinja_env = Environment(
             loader=FileSystemLoader(str(template_dir)),
             autoescape=select_autoescape(['html', 'xml'])
         )
-        
+
         # Initialize AWS SES client if using SES backend
         if self.email_backend == "ses" and self.email_enabled:
             self.ses_client = boto3.client(
@@ -42,11 +45,49 @@ class EmailService:
             )
         else:
             self.ses_client = None
-        
+
         # Create email logs directory for local development
         if self.email_backend == "local":
             self.email_log_dir = Path(__file__).parent.parent.parent / "email_logs"
             self.email_log_dir.mkdir(exist_ok=True)
+
+        self._log_configuration()
+
+    def _log_configuration(self) -> None:
+        """Log how email is configured for this process (startup diagnostics)."""
+        delivery_mode = (
+            "inbox (SendGrid)"
+            if settings.EMAIL_ENABLED and settings.EMAIL_BACKEND == "sendgrid"
+            else "inbox (AWS SES)"
+            if settings.delivers_email_to_inbox
+            else "local only (console + email_logs/)"
+        )
+        logger.info(
+            "Email service configured",
+            environment=self.environment,
+            email_backend=self.email_backend,
+            email_enabled=self.email_enabled,
+            delivery_mode=delivery_mode,
+            from_email=self.from_email,
+            frontend_url=self.frontend_url,
+        )
+        if self.environment in ("staging", "production") and self.email_backend == "local":
+            logger.warning(
+                "ENVIRONMENT is staging/production but EMAIL_BACKEND=local; "
+                "verification and reset emails will not reach user inboxes. "
+                "Set EMAIL_BACKEND=sendgrid (Heroku) or ses (AWS).",
+                environment=self.environment,
+            )
+        if self.email_backend == "sendgrid" and self.email_enabled and not self.sendgrid_api_key:
+            logger.warning(
+                "EMAIL_BACKEND=sendgrid but SENDGRID_API_KEY is not set; "
+                "add the SendGrid add-on or set the config var.",
+            )
+        if self.email_backend == "ses" and self.email_enabled and not self.ses_client:
+            logger.warning(
+                "EMAIL_BACKEND=ses but SES client is not initialized; "
+                "check AWS credentials and region.",
+            )
     
     def _render_template(self, template_name: str, context: Dict[str, Any]) -> tuple[str, str]:
         """
@@ -92,8 +133,9 @@ class EmailService:
         
         if self.email_backend == "ses":
             return await self._send_via_ses(to_email, subject, body_text, body_html)
-        else:
-            return self._send_via_local(to_email, subject, body_text, body_html)
+        if self.email_backend == "sendgrid":
+            return await self._send_via_sendgrid(to_email, subject, body_text, body_html)
+        return self._send_via_local(to_email, subject, body_text, body_html)
     
     async def _send_via_ses(
         self,
@@ -134,6 +176,46 @@ class EmailService:
             return False
         except Exception as e:
             logger.error("Failed to send email via SES", email=to_email, error=str(e))
+            return False
+    
+    async def _send_via_sendgrid(
+        self,
+        to_email: str,
+        subject: str,
+        body_text: str,
+        body_html: str
+    ) -> bool:
+        """Send email via SendGrid API."""
+        if not self.sendgrid_api_key:
+            logger.error("SendGrid API key not configured")
+            return False
+
+        try:
+            from sendgrid import SendGridAPIClient
+            from sendgrid.helpers.mail import Mail
+        except ImportError:
+            logger.error("sendgrid package is not installed")
+            return False
+
+        message = Mail(
+            from_email=self.from_email,
+            to_emails=to_email,
+            subject=subject,
+            plain_text_content=body_text,
+            html_content=body_html,
+        )
+
+        try:
+            client = SendGridAPIClient(self.sendgrid_api_key)
+            response = await asyncio.to_thread(client.send, message)
+            logger.info(
+                "Email sent via SendGrid",
+                email=to_email,
+                status_code=response.status_code,
+            )
+            return 200 <= response.status_code < 300
+        except Exception as e:
+            logger.error("Failed to send email via SendGrid", email=to_email, error=str(e))
             return False
     
     def _send_via_local(

@@ -1,69 +1,50 @@
 # Branch Strategy & Deployment
 
-## Branch to Environment Mapping
+## Environments
 
-| Branch | Environment | Auto-Deploy | Purpose |
-|--------|-------------|-------------|---------|
-| `main` | **Dev** | ✅ Yes | Default branch, frequent deployments |
-| `develop` | **Dev** | ✅ Yes | Development work (alternative to main) |
-| `staging` | **Staging** | ✅ Yes | Pre-production testing |
-| `production` | **Production** | ✅ Yes | Production deployments (manual trigger) |
+| Where | Purpose | Cost |
+|-------|---------|------|
+| **Local** (`docker-compose`) | Development & testing | $0 |
+| **Heroku** (`main` branch) | Production for friends | ~$12/mo |
+| **Vercel** (`main` branch) | Production frontend | $0 |
 
-## Workflow
+There is **no cloud staging environment** — staging happens locally. That keeps the budget at ~$12/month.
 
-### Daily Development (Main Branch)
-1. Create feature branch from `main`
-2. Make changes and commit
-3. Create PR to `main`
-4. Merge PR → **Auto-deploys to Dev** ✅
+Full deploy instructions: **[docs/HEROKU.md](docs/HEROKU.md)**
 
-### Staging Testing
-1. Merge `main` → `staging` (or create PR)
-2. Push to `staging` → **Auto-deploys to Staging** ✅
+## Branch workflow
 
-### Production Deployment
-1. When ready for production:
-   ```bash
-   git checkout production
-   git merge main  # or staging
-   git push origin production
-   ```
-2. Push to `production` → **Auto-deploys to Production** ✅
+| Branch | What happens |
+|--------|----------------|
+| `main` | Default branch; merge feature PRs here |
+| Feature branches | PR → `main`; CI runs tests |
 
-## Why This Setup?
+### Deploy to production
 
-- **Main → Dev**: Keeps main branch active with frequent deployments
-- **Production Branch**: Explicit control over production deployments
-- **Standard Default**: Main remains the default branch (GitHub standard)
-- **Safety**: Production deployments only happen when you push to `production` branch
-
-## Important Notes
-
-⚠️ **Production deployments are automatic** - there's no manual approval gate by default. If you want to add manual approval:
-
-1. Go to GitHub → Settings → Environments
-2. Create/Edit `production` environment
-3. Enable "Required reviewers"
-4. Add yourself as reviewer
-
-Then production deployments will require manual approval in GitHub Actions.
-
-## Quick Reference
+**Backend (Heroku):**
 
 ```bash
-# Deploy to dev (automatic on merge to main)
-git checkout main
-git merge feature-branch
-git push origin main
-
-# Deploy to staging
-git checkout staging
-git merge main
-git push origin staging
-
-# Deploy to production
-git checkout production
-git merge main  # or staging
-git push origin production
+git push heroku main
+# or, if your branch is not main:
+git push heroku main:main
 ```
 
+**Frontend (Vercel):** auto-deploys when `main` is updated (if connected in Vercel dashboard).
+
+### Local development
+
+```bash
+docker-compose up
+# Frontend: http://localhost:3005
+# API: http://localhost:8000
+```
+
+## CI (GitHub Actions)
+
+Pull requests and pushes run **tests** via `.github/workflows/ci-cd.yml`.
+
+AWS deploy jobs in that workflow are **legacy** from the archived Terraform setup. They are skipped unless AWS secrets are configured. Safe to ignore for Heroku deployment.
+
+## Archived: multi-branch AWS workflow
+
+An earlier plan mapped `staging` and `production` branches to separate AWS environments. That flow is documented in `infrastructure/archive/` but is **not active**. Do not push to `staging` / `production` branches expecting cloud deploys unless you restore AWS infrastructure.

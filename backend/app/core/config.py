@@ -2,9 +2,13 @@
 Application configuration using Pydantic settings.
 """
 import json
+from typing import Any, List, Literal, Optional, Union
+
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings
-from pydantic import field_validator
-from typing import List, Optional, Union
+
+EnvironmentName = Literal["local", "staging", "production"]
+EmailBackendName = Literal["local", "ses", "sendgrid"]
 
 
 class Settings(BaseSettings):
@@ -14,6 +18,8 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "World Cup Predictions"
     VERSION: str = "1.0.0"
     DEBUG: bool = False
+    # Deployment environment: drives defaults (e.g. email backend) for stage/prod
+    ENVIRONMENT: EnvironmentName = "local"
     
     # API
     API_V1_PREFIX: str = "/api/v1"
@@ -25,8 +31,8 @@ class Settings(BaseSettings):
     
     # Database
     DATABASE_URL: str
-    DB_POOL_SIZE: int = 20
-    DB_MAX_OVERFLOW: int = 10
+    DB_POOL_SIZE: int = 5
+    DB_MAX_OVERFLOW: int = 5
     
     # Redis
     REDIS_URL: Optional[str] = None
@@ -78,10 +84,57 @@ class Settings(BaseSettings):
     COGNITO_CLIENT_ID: Optional[str] = None
     
     # Email Configuration
-    EMAIL_ENABLED: bool = True  # Set to False to disable email sending
-    EMAIL_BACKEND: str = "local"  # "local" for development, "ses" for AWS SES
+    # local: log to console + backend/email_logs/ (no delivery)
+    # ses: AWS SES — uses IAM role or AWS credentials on the host
+    # sendgrid: SendGrid API (recommended on Heroku; uses SENDGRID_API_KEY)
+    EMAIL_ENABLED: bool = True
+    EMAIL_BACKEND: EmailBackendName = "local"
     SES_FROM_EMAIL: str = "noreply@predico.com"
-    FRONTEND_URL: str = "http://localhost:3005"  # Base URL for email links
+    FRONTEND_URL: str = "http://localhost:3005"
+    SENDGRID_API_KEY: Optional[str] = None
+
+    @field_validator("EMAIL_BACKEND", mode="before")
+    @classmethod
+    def validate_email_backend(cls, v: object) -> str:
+        allowed = {"local", "ses", "sendgrid"}
+        value = str(v).lower() if v is not None else "local"
+        if value not in allowed:
+            raise ValueError(f"EMAIL_BACKEND must be one of: {', '.join(sorted(allowed))}")
+        return value
+
+    @model_validator(mode="before")
+    @classmethod
+    def default_email_backend_for_environment(cls, data: Any) -> Any:
+        """
+        When ENVIRONMENT is staging/production, default EMAIL_BACKEND to ses
+        unless EMAIL_BACKEND is explicitly set in the environment.
+        """
+        if not isinstance(data, dict):
+            return data
+
+        env = str(data.get("ENVIRONMENT", "local")).lower()
+        if env in ("staging", "production") and "EMAIL_BACKEND" not in data:
+            data["EMAIL_BACKEND"] = "ses"
+        return data
+
+    @model_validator(mode="after")
+    def normalize_database_url(self) -> "Settings":
+        """Heroku Postgres uses postgres://; SQLAlchemy async needs postgresql+asyncpg://."""
+        url = self.DATABASE_URL
+        if url.startswith("postgres://"):
+            self.DATABASE_URL = url.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif url.startswith("postgresql://") and "+asyncpg" not in url and "+psycopg2" not in url:
+            self.DATABASE_URL = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return self
+
+    @property
+    def is_local_environment(self) -> bool:
+        return self.ENVIRONMENT == "local"
+
+    @property
+    def delivers_email_to_inbox(self) -> bool:
+        """True when transactional emails are sent via a real provider."""
+        return self.EMAIL_ENABLED and self.EMAIL_BACKEND in ("ses", "sendgrid")
     
     # Cloudflare
     CLOUDFLARE_ZONE_ID: Optional[str] = None

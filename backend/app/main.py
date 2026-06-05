@@ -10,6 +10,7 @@ from app.core.config import settings
 from app.core.logging import setup_logging
 from app.api.v1.router import api_router
 from app.db.database import init_db
+from app.services.email_service import email_service
 
 
 @asynccontextmanager
@@ -17,6 +18,8 @@ async def lifespan(app: FastAPI):
     """Application lifespan events."""
     # Startup
     setup_logging()
+    # Ensures email backend/env is logged once at startup (see EmailService)
+    _ = email_service
     await init_db()
     yield
     # Shutdown

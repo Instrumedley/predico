@@ -18,6 +18,7 @@ export const COUNTRY_CODE_MAP: Record<string, string> = {
   // B
   'BEL': 'be', // Belgium
   'BRA': 'br', // Brazil
+  'BIH': 'ba', // Bosnia and Herzegovina
   // C
   'CAN': 'ca', // Canada
   'CHI': 'cl', // Chile
@@ -69,7 +70,8 @@ export const COUNTRY_CODE_MAP: Record<string, string> = {
   'NZL': 'nz', // New Zealand
   // P
   'PAN': 'pa', // Panama
-  'PAR': 'py', // Paraguay
+  'PAR': 'py', // Paraguay (legacy code)
+  'PRY': 'py', // Paraguay (ISO 3166-1 alpha-3)
   'PER': 'pe', // Peru
   'POL': 'pl', // Poland
   'PRT': 'pt', // Portugal

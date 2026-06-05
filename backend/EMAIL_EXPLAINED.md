@@ -111,18 +111,38 @@ This prevents abuse and spam.
 
 ## For Your Project
 
+Configuration is driven by **`ENVIRONMENT`** and **`EMAIL_BACKEND`** (see `app/core/config.py`).
+
+| Environment | Typical `EMAIL_BACKEND` | Behavior |
+|-------------|-------------------------|----------|
+| `local` (default) | `local` | Console + `backend/email_logs/` — signup flow unchanged |
+| `staging` | `ses` (default if unset) | Real emails via AWS SES |
+| `production` | `ses` (default if unset) | Real emails via AWS SES |
+
+Example files:
+
+- `backend/.env.example` — local Docker / dev
+- `backend/.env.staging.example` — staging ECS secrets template
+- `backend/.env.production.example` — production ECS secrets template
+
 ### Local Development (Current)
-- `EMAIL_BACKEND=local` → Emails logged to console/files
+- `ENVIRONMENT=local` + `EMAIL_BACKEND=local` → Emails logged to console/files
 - No actual sending
 - Perfect for testing templates
+- Signup UI can still mention verification; links appear in logs/files
 
-### Production (When Ready)
-- `EMAIL_BACKEND=ses` → Uses AWS SES
+### Staging / Production (When Ready)
+- Set `ENVIRONMENT=staging` or `production`
+- Set `EMAIL_BACKEND=ses` (auto-default when `ENVIRONMENT` is staging/prod and `EMAIL_BACKEND` is not set)
 - Requires:
   1. AWS SES setup
   2. Domain verification
   3. SPF/DKIM/DMARC DNS records
-  4. Production access request
+  4. Production access request (move out of SES sandbox)
+  5. IAM permission `ses:SendEmail` on the ECS task role
+  6. `FRONTEND_URL` pointing at your real app URL (for links in emails)
+
+No code changes are required to switch — only environment variables in your deployment.
 
 ## Viewing Local Emails
 

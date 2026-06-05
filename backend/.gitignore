@@ -56,7 +56,6 @@ logs/
 *.db
 *.sqlite
 
-# Alembic
-alembic/versions/*.py
-!alembic/versions/.gitkeep
+# Alembic — keep migration files in version control
+# (do not ignore alembic/versions/*.py)
 

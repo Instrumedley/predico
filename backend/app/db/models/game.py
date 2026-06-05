@@ -29,7 +29,16 @@ class Game(Base):
     match_date = Column(Date, nullable=True, index=True)  # Date of the match (without time)
     match_time = Column(Time, nullable=True)  # Time of the match (local time)
     timezone = Column(String(50), nullable=True)  # Timezone (e.g., "UTC-5", "UTC-6")
-    status = Column(SQLEnum(GameStatus), default=GameStatus.SCHEDULED, nullable=False, index=True)
+    status = Column(
+        SQLEnum(
+            GameStatus,
+            name="gamestatus",
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
+        default=GameStatus.SCHEDULED,
+        nullable=False,
+        index=True,
+    )
     
     # Scores (null until game is finished)
     home_score = Column(Integer, nullable=True)

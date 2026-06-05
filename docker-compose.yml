@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: predico_password
       POSTGRES_DB: predico_db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -45,10 +45,14 @@ services:
       dockerfile: Dockerfile
     container_name: predico-backend
     environment:
+      ENVIRONMENT: local
       DATABASE_URL: postgresql+asyncpg://predico_user:predico_password@postgres:5432/predico_db
       REDIS_URL: redis://redis:6379/0
       SECRET_KEY: dev-secret-key-change-in-production
       DEBUG: "True"
+      EMAIL_ENABLED: "True"
+      EMAIL_BACKEND: local
+      FRONTEND_URL: http://localhost:3005
       # CORS_ORIGINS: Use default from config.py (includes ports 3000-3010)
     ports:
       - "8000:8000"

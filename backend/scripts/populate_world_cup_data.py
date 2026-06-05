@@ -29,10 +29,10 @@ from app.db.models.game import Game, GameStatus
 # Country code to flag emoji mapping
 # Using ISO 3166-1 alpha-3 country codes
 COUNTRY_FLAGS = {
-    'MEX': '🇲🇽', 'ZAF': '🇿🇦', 'KOR': '🇰🇷', 'IRL': '🇮🇪',
-    'CAN': '🇨🇦', 'ITA': '🇮🇹', 'QAT': '🇶🇦', 'CHE': '🇨🇭',
+    'MEX': '🇲🇽', 'ZAF': '🇿🇦', 'KOR': '🇰🇷', 'CZE': '🇨🇿',
+    'CAN': '🇨🇦', 'BIH': '🇧🇦', 'QAT': '🇶🇦', 'CHE': '🇨🇭',
     'BRA': '🇧🇷', 'MAR': '🇲🇦', 'HTI': '🇭🇹', 'SCO': '🏴󠁧󠁢󠁳󠁣󠁴󠁿',  # Scotland flag
-    'USA': '🇺🇸', 'PRY': '🇵🇾', 'AUS': '🇦🇺', 'ROU': '🇷🇴',
+    'USA': '🇺🇸', 'PRY': '🇵🇾', 'AUS': '🇦🇺', 'TUR': '🇹🇷',
     'DEU': '🇩🇪', 'CUW': '🇨🇼', 'CIV': '🇨🇮', 'ECU': '🇪🇨',
     'NLD': '🇳🇱', 'JPN': '🇯🇵', 'SWE': '🇸🇪', 'TUN': '🇹🇳',
     'BEL': '🇧🇪', 'EGY': '🇪🇬', 'IRN': '🇮🇷', 'NZL': '🇳🇿',
@@ -45,10 +45,10 @@ COUNTRY_FLAGS = {
 
 # Official 2026 World Cup Groups
 GROUPS_DATA = {
-    'A': ['Mexico', 'S. Africa', 'South Korea', 'Ireland'],
-    'B': ['Canada', 'Italy', 'Qatar', 'Switzerland'],
+    'A': ['Mexico', 'S. Africa', 'South Korea', 'Czechia'],
+    'B': ['Canada', 'Bosnia & Herzegovina', 'Qatar', 'Switzerland'],
     'C': ['Brazil', 'Morocco', 'Haiti', 'Scotland'],
-    'D': ['United States', 'Paraguay', 'Australia', 'Romania'],
+    'D': ['United States', 'Paraguay', 'Australia', 'Turkey'],
     'E': ['Germany', 'Curaçao', 'Ivory Coast', 'Ecuador'],
     'F': ['Netherlands', 'Japan', 'Sweden', 'Tunisia'],
     'G': ['Belgium', 'Egypt', 'Iran', 'New Zealand'],
@@ -61,10 +61,10 @@ GROUPS_DATA = {
 
 # Country name to country code mapping
 COUNTRY_CODES = {
-    'Mexico': 'MEX', 'South Africa': 'ZAF', 'S. Africa': 'ZAF', 'South Korea': 'KOR', 'Ireland': 'IRL',
-    'Canada': 'CAN', 'Italy': 'ITA', 'Qatar': 'QAT', 'Switzerland': 'CHE',
+    'Mexico': 'MEX', 'South Africa': 'ZAF', 'S. Africa': 'ZAF', 'South Korea': 'KOR', 'Czechia': 'CZE',
+    'Canada': 'CAN', 'Bosnia & Herzegovina': 'BIH', 'Qatar': 'QAT', 'Switzerland': 'CHE',
     'Brazil': 'BRA', 'Morocco': 'MAR', 'Haiti': 'HTI', 'Scotland': 'SCO',
-    'United States': 'USA', 'Paraguay': 'PRY', 'Australia': 'AUS', 'Romania': 'ROU',
+    'United States': 'USA', 'Paraguay': 'PRY', 'Australia': 'AUS', 'Turkey': 'TUR',
     'Germany': 'DEU', 'Curaçao': 'CUW', 'Ivory Coast': 'CIV', 'Ecuador': 'ECU',
     'Netherlands': 'NLD', 'Japan': 'JPN', 'Sweden': 'SWE', 'Tunisia': 'TUN',
     'Belgium': 'BEL', 'Egypt': 'EGY', 'Iran': 'IRN', 'New Zealand': 'NZL',
@@ -103,19 +103,19 @@ MATCHDAY_DATES = {
 GROUP_STAGE_MATCHES = [
     # Group A
     ('A', 'Mexico', 'S. Africa', date(2026, 6, 11), 'Matchday 1'),
-    ('A', 'South Korea', 'Ireland', date(2026, 6, 11), 'Matchday 1'),
-    ('A', 'S. Africa', 'Ireland', date(2026, 6, 19), 'Matchday 2'),
+    ('A', 'South Korea', 'Czechia', date(2026, 6, 11), 'Matchday 1'),
+    ('A', 'S. Africa', 'Czechia', date(2026, 6, 19), 'Matchday 2'),
     ('A', 'Mexico', 'South Korea', date(2026, 6, 19), 'Matchday 2'),
-    ('A', 'Ireland', 'Mexico', date(2026, 6, 28), 'Matchday 3'),
+    ('A', 'Czechia', 'Mexico', date(2026, 6, 28), 'Matchday 3'),
     ('A', 'S. Africa', 'South Korea', date(2026, 6, 28), 'Matchday 3'),
     
     # Group B
-    ('B', 'Canada', 'Italy', date(2026, 6, 12), 'Matchday 1'),
+    ('B', 'Canada', 'Bosnia & Herzegovina', date(2026, 6, 12), 'Matchday 1'),
     ('B', 'Qatar', 'Switzerland', date(2026, 6, 12), 'Matchday 1'),
-    ('B', 'Italy', 'Switzerland', date(2026, 6, 20), 'Matchday 2'),
+    ('B', 'Bosnia & Herzegovina', 'Switzerland', date(2026, 6, 20), 'Matchday 2'),
     ('B', 'Canada', 'Qatar', date(2026, 6, 20), 'Matchday 2'),
     ('B', 'Switzerland', 'Canada', date(2026, 6, 29), 'Matchday 3'),
-    ('B', 'Italy', 'Qatar', date(2026, 6, 29), 'Matchday 3'),
+    ('B', 'Bosnia & Herzegovina', 'Qatar', date(2026, 6, 29), 'Matchday 3'),
     
     # Group C
     ('C', 'Brazil', 'Morocco', date(2026, 6, 12), 'Matchday 1'),
@@ -127,10 +127,10 @@ GROUP_STAGE_MATCHES = [
     
     # Group D
     ('D', 'United States', 'Paraguay', date(2026, 6, 12), 'Matchday 1'),
-    ('D', 'Australia', 'Romania', date(2026, 6, 12), 'Matchday 1'),
-    ('D', 'Paraguay', 'Romania', date(2026, 6, 21), 'Matchday 2'),
+    ('D', 'Australia', 'Turkey', date(2026, 6, 12), 'Matchday 1'),
+    ('D', 'Paraguay', 'Turkey', date(2026, 6, 21), 'Matchday 2'),
     ('D', 'United States', 'Australia', date(2026, 6, 21), 'Matchday 2'),
-    ('D', 'Romania', 'United States', date(2026, 6, 30), 'Matchday 3'),
+    ('D', 'Turkey', 'United States', date(2026, 6, 30), 'Matchday 3'),
     ('D', 'Paraguay', 'Australia', date(2026, 6, 30), 'Matchday 3'),
     
     # Group E
