@@ -3,7 +3,7 @@
  * TODO: Replace with real API data from backend
  */
 
-import { Match, NextMatchData, LatestResultsData } from '@/types/matches'
+import { NextMatchData, LatestResultsData } from '@/types/matches'
 
 // Helper to create a date in the future
 const futureDate = (days: number, hours: number = 0): string => {

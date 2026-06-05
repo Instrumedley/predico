@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -32,7 +32,6 @@ export const SignupPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const { signup } = useAuth()
-  const navigate = useNavigate()
 
   const {
     register,

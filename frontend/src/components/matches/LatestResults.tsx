@@ -12,10 +12,10 @@ interface LatestResultsProps {
 
 export const LatestResults: React.FC<LatestResultsProps> = ({ data: propData }) => {
   // Fetch latest results from API
-  const { data: apiData, isLoading, error } = useQuery<LatestResultsData>({
+  const { data: apiData, isLoading } = useQuery<LatestResultsData>({
     queryKey: ['latestResults'],
     queryFn: getLatestResults,
-    staleTime: 1 * 60 * 1000, // 1 minute
+    staleTime: 60 * 1000,
     retry: 1,
   })
 

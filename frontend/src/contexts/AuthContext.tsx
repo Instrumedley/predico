@@ -2,7 +2,7 @@
  * Authentication context for managing user state.
  */
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { authService, AuthResponse, SignupResponse } from '@/services/auth'
+import { authService, AuthResponse } from '@/services/auth'
 
 interface User {
   id: number
@@ -105,7 +105,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }
 
   const signup = async (email: string, password: string, username: string) => {
-    const response: SignupResponse = await authService.signup({ email, password, username })
+    await authService.signup({ email, password, username })
     // Signup doesn't return a token, user needs to verify email first
     // Don't set user or token - redirect to verification page
   }

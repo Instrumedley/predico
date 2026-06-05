@@ -49,7 +49,7 @@ export const GroupComponent: React.FC<GroupComponentProps> = ({ group }) => {
             </tr>
           </thead>
           <tbody>
-            {group.teams.map((team, index) => (
+            {group.teams.map((team) => (
               <tr
                 key={team.countryCode}
                 className={`border-t border-neutral-DEFAULT/10 hover:bg-neutral-light/50 transition-colors`}

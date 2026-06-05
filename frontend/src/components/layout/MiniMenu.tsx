@@ -9,7 +9,7 @@ interface MiniMenuProps {
 
 export const MiniMenu: React.FC<MiniMenuProps> = ({ activeOption = 'dashboard', onOptionChange }) => {
   const [isLeaguesMenuOpen, setIsLeaguesMenuOpen] = useState(false)
-  const [leagues, setLeagues] = useState<string[]>([]) // TODO: Replace with actual leagues data
+  const [leagues] = useState<string[]>([]) // TODO: Replace with actual leagues data
   const menuRef = useRef<HTMLDivElement>(null)
 
   // Close leagues menu when clicking outside

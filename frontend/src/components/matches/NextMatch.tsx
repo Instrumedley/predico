@@ -12,7 +12,7 @@ interface NextMatchProps {
 
 export const NextMatch: React.FC<NextMatchProps> = ({ data: propData }) => {
   // Fetch next match from API
-  const { data: apiData, isLoading, error } = useQuery<NextMatchData>({
+  const { data: apiData, isLoading } = useQuery<NextMatchData>({
     queryKey: ['nextMatch'],
     queryFn: getNextMatch,
     staleTime: 1 * 60 * 1000, // 1 minute
