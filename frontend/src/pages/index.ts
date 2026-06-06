@@ -8,4 +8,6 @@ export { ForgotPasswordPage } from './ForgotPasswordPage'
 export { ResetPasswordPage } from './ResetPasswordPage'
 export { AdminPage } from './AdminPage'
 export { NotFoundPage } from './NotFoundPage'
+export { CreateLeaguePage } from './CreateLeaguePage'
+export { GlobalLeaguesPage } from './GlobalLeaguesPage'
 

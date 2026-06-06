@@ -3,7 +3,7 @@ Main API router that includes all endpoint routers.
 """
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import auth, games, standings, users, admin, predictions
+from app.api.v1.endpoints import auth, games, standings, users, admin, predictions, leagues
 
 api_router = APIRouter()
 
@@ -14,5 +14,5 @@ api_router.include_router(standings.router, prefix="/standings", tags=["standing
 api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 api_router.include_router(predictions.router, prefix="/predictions", tags=["predictions"])
-# api_router.include_router(leagues.router, prefix="/leagues", tags=["leagues"])
+api_router.include_router(leagues.router, prefix="/leagues", tags=["leagues"])
 

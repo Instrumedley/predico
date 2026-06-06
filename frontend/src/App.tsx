@@ -16,6 +16,8 @@ import {
   ResetPasswordPage,
   AdminPage,
   NotFoundPage,
+  CreateLeaguePage,
+  GlobalLeaguesPage,
 } from '@/pages'
 import { AdminRoute } from '@/components/auth/AdminRoute'
 
@@ -48,6 +50,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <ScorecardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/leagues/create"
+            element={
+              <ProtectedRoute>
+                <CreateLeaguePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/leagues/browse"
+            element={
+              <ProtectedRoute>
+                <GlobalLeaguesPage />
               </ProtectedRoute>
             }
           />

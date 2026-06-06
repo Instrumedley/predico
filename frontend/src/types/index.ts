@@ -30,13 +30,13 @@ export interface Prediction {
 }
 
 export interface League {
-  id: string
+  id: number
   name: string
-  description?: string
-  created_by: string
-  created_at: string
+  description?: string | null
   is_private: boolean
-  invite_code?: string
+  created_at: string
+  member_count: number
+  is_member?: boolean
 }
 
 export interface LeagueMember {
