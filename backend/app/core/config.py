@@ -68,10 +68,10 @@ class Settings(BaseSettings):
                 return [parsed]
             except (json.JSONDecodeError, TypeError):
                 # If not JSON, treat as comma-separated string
-                origins = [origin.strip() for origin in v.split(',') if origin.strip()]
+                origins = [origin.strip().rstrip('/') for origin in v.split(',') if origin.strip()]
                 return origins if origins else cls.model_fields['CORS_ORIGINS'].default
         if isinstance(v, list):
-            return v
+            return [origin.rstrip('/') if isinstance(origin, str) else origin for origin in v]
         return []
     
     # AWS
