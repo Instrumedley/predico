@@ -35,6 +35,10 @@ class LeagueInviteResponse(BaseModel):
     failed: List[str]
 
 
+class AcceptLeagueInviteRequest(BaseModel):
+    token: str = Field(..., min_length=1, max_length=128)
+
+
 class LeagueSummary(BaseModel):
     id: int
     name: str

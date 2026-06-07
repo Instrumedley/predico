@@ -1,9 +1,10 @@
-import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { buildLoginPath, saveAuthRedirect } from '@/utils/authRedirect'
 
 const signupSchema = z
   .object({
@@ -32,6 +33,15 @@ export const SignupPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const { signup } = useAuth()
+  const [searchParams] = useSearchParams()
+  const redirectParam = searchParams.get('redirect')
+  const loginPath = buildLoginPath(redirectParam)
+
+  useEffect(() => {
+    if (redirectParam) {
+      saveAuthRedirect(redirectParam)
+    }
+  }, [redirectParam])
 
   const {
     register,
@@ -66,6 +76,11 @@ export const SignupPage: React.FC = () => {
             <p className="mt-2 text-sm text-green-700">
               We've sent a verification email to your inbox. Please check your email and click the verification link to activate your account.
             </p>
+            {redirectParam?.includes('/leagues/') && (
+              <p className="mt-3 text-sm text-green-700">
+                After you verify your email and sign in, you&apos;ll be added to the league automatically.
+              </p>
+            )}
             <p className="mt-4 text-xs text-green-600">
               Didn't receive the email? Check your spam folder or{' '}
               <Link
@@ -78,7 +93,7 @@ export const SignupPage: React.FC = () => {
           </div>
           <div className="mt-4">
             <Link
-              to="/login"
+              to={loginPath}
               className="text-sm font-medium text-primary-medium hover:text-primary-dark"
             >
               Back to login
@@ -99,7 +114,7 @@ export const SignupPage: React.FC = () => {
           <p className="mt-2 text-center text-sm text-neutral-DEFAULT">
             Or{' '}
             <Link
-              to="/login"
+              to={loginPath}
               className="font-medium text-primary-medium hover:text-primary-dark"
             >
               sign in to your existing account

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { buildSignupPath, consumeAuthRedirect, saveAuthRedirect } from '@/utils/authRedirect'
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -18,6 +19,9 @@ export const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false)
   const { login, isAuthenticated, loading: authLoading } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const redirectParam = searchParams.get('redirect')
+  const signupPath = buildSignupPath(redirectParam)
 
   const {
     register,
@@ -30,12 +34,17 @@ export const LoginPage: React.FC = () => {
     },
   })
 
-  // Redirect to dashboard if already authenticated
+  useEffect(() => {
+    if (redirectParam) {
+      saveAuthRedirect(redirectParam)
+    }
+  }, [redirectParam])
+
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      navigate('/dashboard', { replace: true })
+      navigate(consumeAuthRedirect(redirectParam || '/dashboard'), { replace: true })
     }
-  }, [isAuthenticated, authLoading, navigate])
+  }, [isAuthenticated, authLoading, navigate, redirectParam])
 
   // Show loading state while checking authentication
   if (authLoading) {
@@ -56,7 +65,7 @@ export const LoginPage: React.FC = () => {
       setError('')
       setIsLoading(true)
       await login(data.email, data.password, data.rememberMe)
-      navigate('/dashboard')
+      navigate(consumeAuthRedirect(redirectParam || '/dashboard'), { replace: true })
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Login failed. Please try again.')
     } finally {
@@ -74,7 +83,7 @@ export const LoginPage: React.FC = () => {
           <p className="mt-2 text-center text-sm text-neutral-DEFAULT">
             Or{' '}
             <Link
-              to="/signup"
+              to={signupPath}
               className="font-medium text-primary-medium hover:text-primary-dark"
             >
               create a new account

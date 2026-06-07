@@ -6,7 +6,7 @@ You're invited to a league on Predico!
 
 {% if league_description %}{{ league_description }}{% endif %}
 
-{% if is_private %}This is a private league — you'll need the league password when you join.{% endif %}
+{% if is_private %}This is a private league — use the link below to join (no password needed).{% endif %}
 
 Open this link to view the league and join:
 {{ join_url }}

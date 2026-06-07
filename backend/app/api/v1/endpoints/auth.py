@@ -26,6 +26,7 @@ from app.schemas.auth import (
 from app.core.security import get_password_hash, verify_password, create_access_token
 from app.core.config import settings
 from app.services.email_service import email_service
+from app.services.league_service import accept_pending_invites_for_user
 from app.services.token_service import TokenService
 from app.services.cognito_service import cognito_service
 import structlog
@@ -174,6 +175,8 @@ async def login(credentials: LoginRequest, db: AsyncSession = Depends(get_db)):
     access_token = create_access_token(
         data={"sub": str(user.id), "email": user.email}
     )
+
+    await accept_pending_invites_for_user(db, user)
     
     return LoginResponse(
         access_token=access_token,
@@ -197,6 +200,8 @@ async def verify_email(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired verification token"
         )
+
+    await accept_pending_invites_for_user(db, user)
     
     return VerifyEmailResponse(
         message="Email verified successfully"

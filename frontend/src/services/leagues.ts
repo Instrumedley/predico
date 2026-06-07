@@ -85,6 +85,11 @@ export async function inviteToLeague(leagueId: number, emails: string[]): Promis
   return response.data
 }
 
+export async function acceptLeagueInvite(token: string): Promise<LeagueDetail> {
+  const response = await apiClient.post<LeagueDetail>('/api/v1/leagues/accept-invite', { token })
+  return response.data
+}
+
 export function parseEmailInput(input: string): string[] {
   const parts = input
     .split(/[,;\n]+/)

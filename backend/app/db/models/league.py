@@ -67,7 +67,9 @@ class LeagueInvitation(Base):
     id = Column(Integer, primary_key=True, index=True)
     league_id = Column(Integer, ForeignKey("leagues.id"), nullable=False, index=True)
     inviter_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    invitee_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    invitee_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    invitee_email = Column(String, nullable=False, index=True)
+    token = Column(String, unique=True, nullable=False, index=True)
     
     # Status: pending, accepted, rejected, expired
     status = Column(String, default="pending", nullable=False, index=True)

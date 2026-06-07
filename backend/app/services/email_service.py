@@ -321,11 +321,12 @@ class EmailService:
         league_id: int,
         inviter_name: str,
         is_private: bool,
+        invite_token: str,
         league_description: Optional[str] = None,
         recipient_name: Optional[str] = None,
     ) -> bool:
-        """Send a league invitation email with a link to the league detail page."""
-        join_url = f"{self.frontend_url.rstrip('/')}/leagues/{league_id}"
+        """Send a league invitation email with a link to accept the invite."""
+        join_url = f"{self.frontend_url.rstrip('/')}/leagues/{league_id}?invite={invite_token}"
         context = {
             "league_name": league_name,
             "league_description": league_description,

@@ -2,18 +2,19 @@
 League endpoints for creating and browsing prediction leagues.
 """
 import re
+from datetime import datetime
 from typing import List, Optional
 
 from email_validator import EmailNotValidError, validate_email
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.core.security import get_current_user
 from app.db.database import get_db
 from app.db.models import League, LeagueMember, User
 from app.schemas.league import (
+    AcceptLeagueInviteRequest,
     JoinLeagueRequest,
     LeagueCreate,
     LeagueCreateResponse,
@@ -24,7 +25,13 @@ from app.schemas.league import (
     LeagueSummary,
 )
 from app.services.email_service import email_service
-from app.services.league_service import get_league_rankings
+from app.services.league_service import (
+    accept_league_invitation,
+    accept_pending_invites_for_user,
+    create_or_refresh_league_invitation,
+    get_invitation_by_token,
+    get_league_rankings,
+)
 
 router = APIRouter()
 
@@ -103,6 +110,39 @@ async def _build_rankings(db: AsyncSession, league_id: int) -> List[LeagueMember
     ]
 
 
+async def _build_league_detail(
+    db: AsyncSession,
+    league: League,
+    current_user: User,
+    *,
+    is_member: Optional[bool] = None,
+) -> LeagueDetail:
+    if is_member is None:
+        membership = await db.execute(
+            select(LeagueMember).where(
+                LeagueMember.league_id == league.id,
+                LeagueMember.user_id == current_user.id,
+            )
+        )
+        is_member = membership.scalar_one_or_none() is not None
+
+    member_count = await _get_member_counts(db, [league.id])
+    rankings = await _build_rankings(db, league.id) if is_member else []
+
+    return LeagueDetail(
+        id=league.id,
+        name=league.name,
+        description=league.description,
+        is_private=league.is_private,
+        created_at=league.created_at,
+        created_by=league.created_by,
+        member_count=member_count.get(league.id, 0),
+        is_member=is_member,
+        is_creator=league.created_by == current_user.id,
+        rankings=rankings,
+    )
+
+
 @router.get("/me", response_model=List[LeagueSummary])
 async def list_my_leagues(
     current_user: User = Depends(get_current_user),
@@ -148,6 +188,63 @@ async def list_leagues(
     ]
 
 
+@router.post("/accept-invite", response_model=LeagueDetail)
+async def accept_league_invite(
+    payload: AcceptLeagueInviteRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Accept a league invitation using the token from the invite email."""
+    invitation = await get_invitation_by_token(db, payload.token)
+    if not invitation:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired invitation",
+        )
+
+    if invitation.invitee_email.lower() != current_user.email.lower():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This invitation was sent to a different email address",
+        )
+
+    result = await db.execute(select(League).where(League.id == invitation.league_id))
+    league = result.scalar_one_or_none()
+    if not league:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="League not found")
+
+    if invitation.status == "accepted":
+        membership = await db.execute(
+            select(LeagueMember).where(
+                LeagueMember.league_id == league.id,
+                LeagueMember.user_id == current_user.id,
+            )
+        )
+        if not membership.scalar_one_or_none():
+            db.add(LeagueMember(league_id=league.id, user_id=current_user.id))
+            await db.commit()
+        return await _build_league_detail(db, league, current_user, is_member=True)
+
+    if invitation.status != "pending":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired invitation",
+        )
+    if invitation.expires_at and invitation.expires_at <= datetime.utcnow():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invitation has expired",
+        )
+
+    try:
+        await accept_league_invitation(db, invitation, current_user)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    await db.commit()
+    return await _build_league_detail(db, league, current_user, is_member=True)
+
+
 @router.get("/{league_id}", response_model=LeagueDetail)
 async def get_league_detail(
     league_id: int,
@@ -160,28 +257,7 @@ async def get_league_detail(
     if not league:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="League not found")
 
-    membership = await db.execute(
-        select(LeagueMember).where(
-            LeagueMember.league_id == league_id,
-            LeagueMember.user_id == current_user.id,
-        )
-    )
-    is_member = membership.scalar_one_or_none() is not None
-    member_count = await _get_member_counts(db, [league.id])
-    rankings = await _build_rankings(db, league.id) if is_member else []
-
-    return LeagueDetail(
-        id=league.id,
-        name=league.name,
-        description=league.description,
-        is_private=league.is_private,
-        created_at=league.created_at,
-        created_by=league.created_by,
-        member_count=member_count.get(league.id, 0),
-        is_member=is_member,
-        is_creator=league.created_by == current_user.id,
-        rankings=rankings,
-    )
+    return await _build_league_detail(db, league, current_user)
 
 
 @router.post("", response_model=LeagueCreateResponse, status_code=status.HTTP_201_CREATED)
@@ -263,21 +339,7 @@ async def join_league(
     db.add(LeagueMember(league_id=league.id, user_id=current_user.id))
     await db.commit()
 
-    member_count = await _get_member_counts(db, [league.id])
-    rankings = await _build_rankings(db, league.id)
-
-    return LeagueDetail(
-        id=league.id,
-        name=league.name,
-        description=league.description,
-        is_private=league.is_private,
-        created_at=league.created_at,
-        created_by=league.created_by,
-        member_count=member_count.get(league.id, 0),
-        is_member=True,
-        is_creator=league.created_by == current_user.id,
-        rankings=rankings,
-    )
+    return await _build_league_detail(db, league, current_user, is_member=True)
 
 
 @router.post("/{league_id}/invitations", response_model=LeagueInviteResponse)
@@ -301,8 +363,23 @@ async def invite_to_league(
     failed: List[str] = []
 
     for email in emails:
+        member_result = await db.execute(
+            select(LeagueMember)
+            .join(User, User.id == LeagueMember.user_id)
+            .where(LeagueMember.league_id == league.id, User.email == email)
+        )
+        if member_result.scalar_one_or_none():
+            sent.append(email)
+            continue
+
         user_result = await db.execute(select(User).where(User.email == email))
         invitee = user_result.scalar_one_or_none()
+        invite_token = await create_or_refresh_league_invitation(
+            db,
+            league_id=league.id,
+            inviter_id=current_user.id,
+            invitee_email=email,
+        )
         success = await email_service.send_league_invite_email(
             email=email,
             league_name=league.name,
@@ -310,12 +387,16 @@ async def invite_to_league(
             inviter_name=current_user.username,
             league_id=league.id,
             is_private=league.is_private,
+            invite_token=invite_token,
             recipient_name=invitee.username if invitee else None,
         )
         if success:
             sent.append(email)
         else:
             failed.append(email)
+
+    if sent or failed:
+        await db.commit()
 
     if not sent and failed:
         raise HTTPException(

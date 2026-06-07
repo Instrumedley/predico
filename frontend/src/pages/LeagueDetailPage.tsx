@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { NavBar } from '@/components/layout'
@@ -7,6 +7,7 @@ import { JoinLeagueModal } from '@/components/leagues'
 import { useAuth } from '@/contexts/AuthContext'
 import { useFeedback } from '@/contexts/FeedbackContext'
 import {
+  acceptLeagueInvite,
   getLeagueDetail,
   inviteToLeague,
   joinLeague,
@@ -16,9 +17,12 @@ import {
 export const LeagueDetailPage: React.FC = () => {
   const { leagueId } = useParams<{ leagueId: string }>()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const queryClient = useQueryClient()
   const { user } = useAuth()
   const { showFeedback } = useFeedback()
+  const inviteToken = searchParams.get('invite')
+  const handledInviteToken = useRef<string | null>(null)
 
   const parsedLeagueId = Number(leagueId)
   const [joinOpen, setJoinOpen] = useState(false)
@@ -66,6 +70,36 @@ export const LeagueDetailPage: React.FC = () => {
       setInviteError(err.response?.data?.detail || 'Failed to send invitations.')
     },
   })
+
+  const acceptInviteMutation = useMutation({
+    mutationFn: (token: string) => acceptLeagueInvite(token),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['leagueDetail', parsedLeagueId], data)
+      queryClient.invalidateQueries({ queryKey: ['myLeagues'] })
+      queryClient.invalidateQueries({ queryKey: ['allLeagues'] })
+      showFeedback(`You joined ${data.name}!`, 'success')
+      if (searchParams.has('invite')) {
+        const nextParams = new URLSearchParams(searchParams)
+        nextParams.delete('invite')
+        setSearchParams(nextParams, { replace: true })
+      }
+    },
+    onError: (err: any) => {
+      showFeedback(err.response?.data?.detail || 'Could not accept this invitation.', 'error')
+    },
+  })
+
+  useEffect(() => {
+    if (!inviteToken || !league || league.is_member) {
+      return
+    }
+    if (handledInviteToken.current === inviteToken) {
+      return
+    }
+    handledInviteToken.current = inviteToken
+    acceptInviteMutation.mutate(inviteToken)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inviteToken, league?.is_member, league?.id])
 
   const parsedEmails = useMemo(() => parseEmailInput(inviteInput), [inviteInput])
   const createdLabel = league ? format(new Date(league.created_at), 'MMM d, yyyy') : ''

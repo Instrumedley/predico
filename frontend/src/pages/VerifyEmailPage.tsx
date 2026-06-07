@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import apiClient from '@/services/api'
+import { buildLoginPath, getAuthRedirect } from '@/utils/authRedirect'
 
 export const VerifyEmailPage: React.FC = () => {
   const [searchParams] = useSearchParams()
@@ -35,7 +36,8 @@ export const VerifyEmailPage: React.FC = () => {
       setStatus('success')
       setMessage(response.data.message || 'Email verified successfully!')
       setTimeout(() => {
-        navigate('/login')
+        const redirect = getAuthRedirect()
+        navigate(buildLoginPath(redirect))
       }, 3000)
     } catch (error: any) {
       setStatus('error')
