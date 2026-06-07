@@ -1,8 +1,10 @@
 """
 League model for private prediction leagues.
 """
+import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, Integer, Boolean, DateTime, ForeignKey, Index
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.db.database import Base
 
@@ -13,6 +15,7 @@ class League(Base):
     __tablename__ = "leagues"
     
     id = Column(Integer, primary_key=True, index=True)
+    public_id = Column(UUID(as_uuid=True), default=uuid.uuid4, unique=True, nullable=False, index=True)
     name = Column(String, nullable=False, index=True)
     description = Column(String, nullable=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)

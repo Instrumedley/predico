@@ -24,24 +24,24 @@ export const LeagueDetailPage: React.FC = () => {
   const inviteToken = searchParams.get('invite')
   const handledInviteToken = useRef<string | null>(null)
 
-  const parsedLeagueId = Number(leagueId)
+  const leaguePublicId = leagueId ?? ''
   const [joinOpen, setJoinOpen] = useState(false)
   const [joinError, setJoinError] = useState('')
   const [inviteInput, setInviteInput] = useState('')
   const [inviteError, setInviteError] = useState('')
 
   const { data: league, isLoading, error } = useQuery({
-    queryKey: ['leagueDetail', parsedLeagueId],
-    queryFn: () => getLeagueDetail(parsedLeagueId),
-    enabled: Number.isFinite(parsedLeagueId),
+    queryKey: ['leagueDetail', leaguePublicId],
+    queryFn: () => getLeagueDetail(leaguePublicId),
+    enabled: Boolean(leaguePublicId),
   })
 
   const joinMutation = useMutation({
-    mutationFn: (password?: string) => joinLeague(parsedLeagueId, password),
+    mutationFn: (password?: string) => joinLeague(leaguePublicId, password),
     onSuccess: (data) => {
       setJoinOpen(false)
       setJoinError('')
-      queryClient.setQueryData(['leagueDetail', parsedLeagueId], data)
+      queryClient.setQueryData(['leagueDetail', leaguePublicId], data)
       queryClient.invalidateQueries({ queryKey: ['myLeagues'] })
       queryClient.invalidateQueries({ queryKey: ['allLeagues'] })
       showFeedback(`You joined ${data.name}.`, 'success')
@@ -52,7 +52,7 @@ export const LeagueDetailPage: React.FC = () => {
   })
 
   const inviteMutation = useMutation({
-    mutationFn: (emails: string[]) => inviteToLeague(parsedLeagueId, emails),
+    mutationFn: (emails: string[]) => inviteToLeague(leaguePublicId, emails),
     onSuccess: (result) => {
       setInviteInput('')
       setInviteError('')
@@ -74,7 +74,7 @@ export const LeagueDetailPage: React.FC = () => {
   const acceptInviteMutation = useMutation({
     mutationFn: (token: string) => acceptLeagueInvite(token),
     onSuccess: (data) => {
-      queryClient.setQueryData(['leagueDetail', parsedLeagueId], data)
+      queryClient.setQueryData(['leagueDetail', leaguePublicId], data)
       queryClient.invalidateQueries({ queryKey: ['myLeagues'] })
       queryClient.invalidateQueries({ queryKey: ['allLeagues'] })
       showFeedback(`You joined ${data.name}!`, 'success')
@@ -114,7 +114,7 @@ export const LeagueDetailPage: React.FC = () => {
     inviteMutation.mutate(parsedEmails)
   }
 
-  if (!Number.isFinite(parsedLeagueId)) {
+  if (!leaguePublicId) {
     return (
       <div className="min-h-screen bg-neutral-light">
         <NavBar />

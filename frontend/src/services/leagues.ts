@@ -4,7 +4,7 @@
 import apiClient from './api'
 
 export interface LeagueSummary {
-  id: number
+  id: string
   name: string
   description?: string | null
   is_private: boolean
@@ -21,7 +21,7 @@ export interface LeagueMemberRanking {
 }
 
 export interface LeagueDetail {
-  id: number
+  id: string
   name: string
   description?: string | null
   is_private: boolean
@@ -61,7 +61,7 @@ export async function getAllLeagues(search?: string): Promise<LeagueSummary[]> {
   return response.data
 }
 
-export async function getLeagueDetail(leagueId: number): Promise<LeagueDetail> {
+export async function getLeagueDetail(leagueId: string): Promise<LeagueDetail> {
   const response = await apiClient.get<LeagueDetail>(`/api/v1/leagues/${leagueId}`)
   return response.data
 }
@@ -71,14 +71,14 @@ export async function createLeague(payload: CreateLeaguePayload): Promise<Create
   return response.data
 }
 
-export async function joinLeague(leagueId: number, inviteCode?: string): Promise<LeagueDetail> {
+export async function joinLeague(leagueId: string, inviteCode?: string): Promise<LeagueDetail> {
   const response = await apiClient.post<LeagueDetail>(`/api/v1/leagues/${leagueId}/join`, {
     invite_code: inviteCode || undefined,
   })
   return response.data
 }
 
-export async function inviteToLeague(leagueId: number, emails: string[]): Promise<LeagueInviteResponse> {
+export async function inviteToLeague(leagueId: string, emails: string[]): Promise<LeagueInviteResponse> {
   const response = await apiClient.post<LeagueInviteResponse>(`/api/v1/leagues/${leagueId}/invitations`, {
     emails,
   })

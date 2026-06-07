@@ -22,7 +22,7 @@ export const GlobalLeaguesPage: React.FC = () => {
   })
 
   const joinMutation = useMutation({
-    mutationFn: ({ leagueId, password }: { leagueId: number; password?: string }) =>
+    mutationFn: ({ leagueId, password }: { leagueId: string; password?: string }) =>
       joinLeague(leagueId, password),
     onSuccess: (data) => {
       setJoinTarget(null)

@@ -3,6 +3,7 @@ Pydantic schemas for league endpoints.
 """
 from datetime import datetime
 from typing import List, Optional
+from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -40,7 +41,7 @@ class AcceptLeagueInviteRequest(BaseModel):
 
 
 class LeagueSummary(BaseModel):
-    id: int
+    id: UUID
     name: str
     description: Optional[str] = None
     is_private: bool
@@ -60,7 +61,7 @@ class LeagueMemberRanking(BaseModel):
 
 
 class LeagueDetail(BaseModel):
-    id: int
+    id: UUID
     name: str
     description: Optional[str] = None
     is_private: bool
@@ -73,7 +74,7 @@ class LeagueDetail(BaseModel):
 
 
 class LeagueCreateResponse(BaseModel):
-    id: int
+    id: UUID
     name: str
     description: Optional[str] = None
     is_private: bool

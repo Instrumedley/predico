@@ -4,6 +4,7 @@ League endpoints for creating and browsing prediction leagues.
 import re
 from datetime import datetime
 from typing import List, Optional
+from uuid import UUID
 
 from email_validator import EmailNotValidError, validate_email
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -38,7 +39,7 @@ router = APIRouter()
 
 def _league_summary(league: League, member_count: int, is_member: bool) -> LeagueSummary:
     return LeagueSummary(
-        id=league.id,
+        id=league.public_id,
         name=league.name,
         description=league.description,
         is_private=league.is_private,
@@ -77,6 +78,14 @@ def _normalize_emails(raw_emails: List[str]) -> List[str]:
             detail="You can invite up to 20 email addresses at once",
         )
     return normalized
+
+
+async def _get_league_or_404(db: AsyncSession, league_id: UUID) -> League:
+    result = await db.execute(select(League).where(League.public_id == league_id))
+    league = result.scalar_one_or_none()
+    if not league:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="League not found")
+    return league
 
 
 async def _get_member_counts(db: AsyncSession, league_ids: List[int]) -> dict[int, int]:
@@ -130,7 +139,7 @@ async def _build_league_detail(
     rankings = await _build_rankings(db, league.id) if is_member else []
 
     return LeagueDetail(
-        id=league.id,
+        id=league.public_id,
         name=league.name,
         description=league.description,
         is_private=league.is_private,
@@ -247,16 +256,12 @@ async def accept_league_invite(
 
 @router.get("/{league_id}", response_model=LeagueDetail)
 async def get_league_detail(
-    league_id: int,
+    league_id: UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """League detail with member rankings for league members."""
-    result = await db.execute(select(League).where(League.id == league_id))
-    league = result.scalar_one_or_none()
-    if not league:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="League not found")
-
+    league = await _get_league_or_404(db, league_id)
     return await _build_league_detail(db, league, current_user)
 
 
@@ -298,7 +303,7 @@ async def create_league(
     await db.refresh(league)
 
     return LeagueCreateResponse(
-        id=league.id,
+        id=league.public_id,
         name=league.name,
         description=league.description,
         is_private=league.is_private,
@@ -310,21 +315,18 @@ async def create_league(
 
 @router.post("/{league_id}/join", response_model=LeagueDetail)
 async def join_league(
-    league_id: int,
+    league_id: UUID,
     payload: Optional[JoinLeagueRequest] = None,
     invite_code: Optional[str] = Query(None, max_length=50),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Join a public league, or a private league with the correct password."""
-    result = await db.execute(select(League).where(League.id == league_id))
-    league = result.scalar_one_or_none()
-    if not league:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="League not found")
+    league = await _get_league_or_404(db, league_id)
 
     existing = await db.execute(
         select(LeagueMember).where(
-            LeagueMember.league_id == league_id,
+            LeagueMember.league_id == league.id,
             LeagueMember.user_id == current_user.id,
         )
     )
@@ -344,16 +346,13 @@ async def join_league(
 
 @router.post("/{league_id}/invitations", response_model=LeagueInviteResponse)
 async def invite_to_league(
-    league_id: int,
+    league_id: UUID,
     payload: LeagueInviteRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Send league invitation emails. Only the league creator can invite."""
-    result = await db.execute(select(League).where(League.id == league_id))
-    league = result.scalar_one_or_none()
-    if not league:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="League not found")
+    league = await _get_league_or_404(db, league_id)
 
     if league.created_by != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the league creator can send invites")
@@ -385,7 +384,7 @@ async def invite_to_league(
             league_name=league.name,
             league_description=league.description,
             inviter_name=current_user.username,
-            league_id=league.id,
+            league_public_id=league.public_id,
             is_private=league.is_private,
             invite_token=invite_token,
             recipient_name=invitee.username if invitee else None,
