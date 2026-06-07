@@ -182,10 +182,17 @@ async def score_all_predictions_for_game(game: Game, db_session) -> int:
     
     # Score each prediction
     scored_count = 0
+    user_ids = set()
     for prediction in predictions:
         score_prediction(prediction, game)
+        user_ids.add(prediction.user_id)
         scored_count += 1
-    
+
+    from app.services.league_service import sync_league_member_points
+
+    for user_id in user_ids:
+        await sync_league_member_points(db_session, user_id)
+
     # Commit all changes
     await db_session.commit()
     

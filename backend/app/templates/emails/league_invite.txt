@@ -1,0 +1,14 @@
+You're invited to a league on Predico!
+
+{% if recipient_name %}Hi {{ recipient_name }},{% else %}Hi,{% endif %}
+
+{{ inviter_name }} invited you to join the league "{{ league_name }}".
+
+{% if league_description %}{{ league_description }}{% endif %}
+
+{% if is_private %}This is a private league — you'll need the league password when you join.{% endif %}
+
+Open this link to view the league and join:
+{{ join_url }}
+
+World Cup predictions with friends on Predico.

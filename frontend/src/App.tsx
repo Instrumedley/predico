@@ -18,6 +18,7 @@ import {
   NotFoundPage,
   CreateLeaguePage,
   GlobalLeaguesPage,
+  LeagueDetailPage,
 } from '@/pages'
 import { AdminRoute } from '@/components/auth/AdminRoute'
 
@@ -66,6 +67,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <GlobalLeaguesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/leagues/:leagueId"
+            element={
+              <ProtectedRoute>
+                <LeagueDetailPage />
               </ProtectedRoute>
             }
           />

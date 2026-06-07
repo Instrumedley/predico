@@ -314,6 +314,34 @@ class EmailService:
             body_html=html_content
         )
 
+    async def send_league_invite_email(
+        self,
+        email: str,
+        league_name: str,
+        league_id: int,
+        inviter_name: str,
+        is_private: bool,
+        league_description: Optional[str] = None,
+        recipient_name: Optional[str] = None,
+    ) -> bool:
+        """Send a league invitation email with a link to the league detail page."""
+        join_url = f"{self.frontend_url.rstrip('/')}/leagues/{league_id}"
+        context = {
+            "league_name": league_name,
+            "league_description": league_description,
+            "inviter_name": inviter_name,
+            "join_url": join_url,
+            "is_private": is_private,
+            "recipient_name": recipient_name,
+        }
+        html_content, text_content = self._render_template("league_invite", context)
+        return await self._send_email(
+            to_email=email,
+            subject=f"{inviter_name} invited you to join {league_name} on Predico",
+            body_text=text_content,
+            body_html=html_content,
+        )
+
 
 # Singleton instance
 email_service = EmailService()

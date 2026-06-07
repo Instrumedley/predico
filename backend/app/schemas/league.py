@@ -2,7 +2,7 @@
 Pydantic schemas for league endpoints.
 """
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -22,6 +22,19 @@ class LeagueCreate(BaseModel):
         return self
 
 
+class JoinLeagueRequest(BaseModel):
+    invite_code: Optional[str] = Field(None, max_length=50)
+
+
+class LeagueInviteRequest(BaseModel):
+    emails: List[str] = Field(..., min_length=1, max_length=20)
+
+
+class LeagueInviteResponse(BaseModel):
+    sent: List[str]
+    failed: List[str]
+
+
 class LeagueSummary(BaseModel):
     id: int
     name: str
@@ -33,6 +46,26 @@ class LeagueSummary(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class LeagueMemberRanking(BaseModel):
+    rank: int
+    user_id: int
+    username: str
+    total_points: int
+
+
+class LeagueDetail(BaseModel):
+    id: int
+    name: str
+    description: Optional[str] = None
+    is_private: bool
+    created_at: datetime
+    created_by: int
+    member_count: int
+    is_member: bool
+    is_creator: bool
+    rankings: List[LeagueMemberRanking] = []
 
 
 class LeagueCreateResponse(BaseModel):

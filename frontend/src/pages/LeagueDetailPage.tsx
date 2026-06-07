@@ -1,0 +1,258 @@
+import React, { useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { format } from 'date-fns'
+import { NavBar } from '@/components/layout'
+import { JoinLeagueModal } from '@/components/leagues'
+import { useAuth } from '@/contexts/AuthContext'
+import { useFeedback } from '@/contexts/FeedbackContext'
+import {
+  getLeagueDetail,
+  inviteToLeague,
+  joinLeague,
+  parseEmailInput,
+} from '@/services/leagues'
+
+export const LeagueDetailPage: React.FC = () => {
+  const { leagueId } = useParams<{ leagueId: string }>()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
+  const { showFeedback } = useFeedback()
+
+  const parsedLeagueId = Number(leagueId)
+  const [joinOpen, setJoinOpen] = useState(false)
+  const [joinError, setJoinError] = useState('')
+  const [inviteInput, setInviteInput] = useState('')
+  const [inviteError, setInviteError] = useState('')
+
+  const { data: league, isLoading, error } = useQuery({
+    queryKey: ['leagueDetail', parsedLeagueId],
+    queryFn: () => getLeagueDetail(parsedLeagueId),
+    enabled: Number.isFinite(parsedLeagueId),
+  })
+
+  const joinMutation = useMutation({
+    mutationFn: (password?: string) => joinLeague(parsedLeagueId, password),
+    onSuccess: (data) => {
+      setJoinOpen(false)
+      setJoinError('')
+      queryClient.setQueryData(['leagueDetail', parsedLeagueId], data)
+      queryClient.invalidateQueries({ queryKey: ['myLeagues'] })
+      queryClient.invalidateQueries({ queryKey: ['allLeagues'] })
+      showFeedback(`You joined ${data.name}.`, 'success')
+    },
+    onError: (err: any) => {
+      setJoinError(err.response?.data?.detail || 'Failed to join league.')
+    },
+  })
+
+  const inviteMutation = useMutation({
+    mutationFn: (emails: string[]) => inviteToLeague(parsedLeagueId, emails),
+    onSuccess: (result) => {
+      setInviteInput('')
+      setInviteError('')
+      if (result.sent.length > 0) {
+        showFeedback(
+          `Invitation${result.sent.length > 1 ? 's' : ''} sent to ${result.sent.length} email address${result.sent.length > 1 ? 'es' : ''}.`,
+          'success'
+        )
+      }
+      if (result.failed.length > 0) {
+        showFeedback(`Could not send to: ${result.failed.join(', ')}`, 'error')
+      }
+    },
+    onError: (err: any) => {
+      setInviteError(err.response?.data?.detail || 'Failed to send invitations.')
+    },
+  })
+
+  const parsedEmails = useMemo(() => parseEmailInput(inviteInput), [inviteInput])
+  const createdLabel = league ? format(new Date(league.created_at), 'MMM d, yyyy') : ''
+
+  const handleInviteSubmit = (event: React.FormEvent) => {
+    event.preventDefault()
+    setInviteError('')
+    if (parsedEmails.length === 0) {
+      setInviteError('Enter at least one valid email address.')
+      return
+    }
+    inviteMutation.mutate(parsedEmails)
+  }
+
+  if (!Number.isFinite(parsedLeagueId)) {
+    return (
+      <div className="min-h-screen bg-neutral-light">
+        <NavBar />
+        <div className="max-w-4xl mx-auto px-4 py-8 text-sm text-red-600">Invalid league.</div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-neutral-light">
+      <NavBar />
+
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="text-sm text-primary-medium hover:text-primary-dark transition-colors"
+        >
+          ← Back
+        </button>
+
+        {isLoading ? (
+          <div className="mt-6 text-sm text-neutral-DEFAULT/60">Loading league...</div>
+        ) : error || !league ? (
+          <div className="mt-6 text-sm text-red-600">League not found.</div>
+        ) : (
+          <>
+            <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-2xl font-bold text-neutral-DEFAULT">{league.name}</h1>
+                  {league.is_private && (
+                    <span className="inline-flex items-center rounded-full bg-neutral-light px-2 py-0.5 text-xs text-neutral-DEFAULT/70">
+                      Private
+                    </span>
+                  )}
+                </div>
+                {league.description && (
+                  <p className="mt-2 text-sm text-neutral-DEFAULT/70">{league.description}</p>
+                )}
+                <p className="mt-2 text-xs text-neutral-DEFAULT/60">
+                  {league.member_count} member{league.member_count === 1 ? '' : 's'} · Created {createdLabel}
+                </p>
+              </div>
+
+              {!league.is_member && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setJoinError('')
+                    setJoinOpen(true)
+                  }}
+                  className="rounded-md bg-primary-medium px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark transition-colors"
+                >
+                  Join league
+                </button>
+              )}
+            </div>
+
+            {league.is_member && (
+              <div className="mt-8 bg-white rounded-lg border border-neutral-DEFAULT/20 shadow-sm overflow-hidden">
+                <div className="px-4 py-3 border-b border-neutral-DEFAULT/10 bg-neutral-light">
+                  <h2 className="text-sm font-semibold text-neutral-DEFAULT">League ranking</h2>
+                </div>
+                {league.rankings.length === 0 ? (
+                  <div className="px-4 py-8 text-center text-sm text-neutral-DEFAULT/60">
+                    No points scored yet. Rankings update when match results are entered.
+                  </div>
+                ) : (
+                  <table className="min-w-full divide-y divide-neutral-DEFAULT/10">
+                    <thead>
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-DEFAULT/70">
+                          Rank
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-DEFAULT/70">
+                          Player
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-neutral-DEFAULT/70">
+                          Points
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-DEFAULT/10">
+                      {league.rankings.map((entry) => {
+                        const isCurrentUser = user?.id === entry.user_id
+                        return (
+                          <tr
+                            key={entry.user_id}
+                            className={isCurrentUser ? 'bg-primary-medium/10' : undefined}
+                          >
+                            <td className="px-4 py-3 text-sm text-neutral-DEFAULT">{entry.rank}</td>
+                            <td className="px-4 py-3 text-sm text-neutral-DEFAULT">
+                              {entry.username}
+                              {isCurrentUser && (
+                                <span className="ml-2 text-xs text-primary-medium">You</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-neutral-DEFAULT text-right font-medium">
+                              {entry.total_points}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            )}
+
+            {league.is_creator && (
+              <div className="mt-8 bg-white rounded-lg border border-neutral-DEFAULT/20 shadow-sm p-6">
+                <h2 className="text-lg font-semibold text-neutral-DEFAULT">Invite friends</h2>
+                <p className="mt-2 text-sm text-neutral-DEFAULT/70">
+                  Add one or more email addresses separated by commas or new lines. Each person will
+                  receive a link to this league.
+                </p>
+
+                <form onSubmit={handleInviteSubmit} className="mt-4 space-y-4">
+                  <div>
+                    <label htmlFor="invite-emails" className="sr-only">
+                      Email addresses
+                    </label>
+                    <textarea
+                      id="invite-emails"
+                      rows={4}
+                      value={inviteInput}
+                      onChange={(event) => setInviteInput(event.target.value)}
+                      className="block w-full rounded-md border border-neutral-DEFAULT/30 px-3 py-2 shadow-sm focus:border-primary-medium focus:outline-none focus:ring-1 focus:ring-primary-medium"
+                    />
+                    {parsedEmails.length > 0 && (
+                      <p className="mt-2 text-xs text-neutral-DEFAULT/60">
+                        Ready to send to {parsedEmails.length} address{parsedEmails.length === 1 ? '' : 'es'}.
+                      </p>
+                    )}
+                  </div>
+
+                  {inviteError && (
+                    <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{inviteError}</div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={inviteMutation.isPending || parsedEmails.length === 0}
+                    className="rounded-md bg-primary-medium px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-50"
+                  >
+                    {inviteMutation.isPending ? 'Sending invites...' : 'Send invites'}
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {!league.is_member && (
+              <div className="mt-8 rounded-lg border border-dashed border-neutral-DEFAULT/20 bg-white p-6 text-sm text-neutral-DEFAULT/70">
+                Join this league to see the member ranking and compete with friends.
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {league && (
+        <JoinLeagueModal
+          isOpen={joinOpen}
+          leagueName={league.name}
+          requiresPassword={league.is_private}
+          isSubmitting={joinMutation.isPending}
+          error={joinError}
+          onClose={() => setJoinOpen(false)}
+          onSubmit={(password) => joinMutation.mutate(password)}
+        />
+      )}
+    </div>
+  )
+}

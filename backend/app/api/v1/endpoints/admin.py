@@ -66,52 +66,18 @@ async def update_game_result(
     await db.refresh(game)
     
     # TODO: Trigger events for score calculation
-    # This will be implemented when we add prediction scoring
-    # For now, we'll create a placeholder structure
-    await trigger_score_calculation_events(game, db)
+    from app.services.scoring_service import score_all_predictions_for_game
+
+    scored = await score_all_predictions_for_game(game, db)
     
     return {
         "message": "Game result updated successfully",
         "game_id": game.id,
         "home_score": game.home_score,
         "away_score": game.away_score,
-        "status": game.status.value
+        "status": game.status.value,
+        "predictions_scored": scored,
     }
-
-
-async def trigger_score_calculation_events(game: Game, db: AsyncSession):
-    """
-    Trigger events for calculating prediction scores.
-    
-    This is a placeholder function that will be implemented when
-    we add the prediction scoring system.
-    
-    Args:
-        game: The game that was just finished
-        db: Database session
-    """
-    # TODO: Implement prediction score calculation
-    # This should:
-    # 1. Get all predictions for this game
-    # 2. Calculate points for each prediction based on:
-    #    - Exact score match
-    #    - Correct result (win/draw)
-    #    - Correct goal difference
-    # 3. Update user scores in leagues
-    # 4. Update global user scores
-    
-    # Placeholder: Just log that we would calculate scores
-    import structlog
-    logger = structlog.get_logger(__name__)
-    logger.info(
-        "Score calculation event triggered",
-        game_id=game.id,
-        home_score=game.home_score,
-        away_score=game.away_score
-    )
-    
-    # For now, do nothing - this will be implemented later
-    pass
 
 
 @router.post("/games/{game_id}/reset", response_model=dict)

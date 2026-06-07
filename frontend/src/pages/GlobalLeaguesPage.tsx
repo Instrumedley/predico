@@ -1,17 +1,40 @@
 import React, { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { Link, useNavigate } from 'react-router-dom'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { NavBar } from '@/components/layout'
-import { getAllLeagues } from '@/services/leagues'
+import { JoinLeagueModal } from '@/components/leagues'
+import { getAllLeagues, joinLeague, LeagueSummary } from '@/services/leagues'
+import { useFeedback } from '@/contexts/FeedbackContext'
 import { format } from 'date-fns'
 
 export const GlobalLeaguesPage: React.FC = () => {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const { showFeedback } = useFeedback()
   const [searchInput, setSearchInput] = useState('')
+  const [joinTarget, setJoinTarget] = useState<LeagueSummary | null>(null)
+  const [joinError, setJoinError] = useState('')
 
   const { data: leagues = [], isLoading, error } = useQuery({
     queryKey: ['allLeagues'],
     queryFn: () => getAllLeagues(),
     staleTime: 30 * 1000,
+  })
+
+  const joinMutation = useMutation({
+    mutationFn: ({ leagueId, password }: { leagueId: number; password?: string }) =>
+      joinLeague(leagueId, password),
+    onSuccess: (data) => {
+      setJoinTarget(null)
+      setJoinError('')
+      queryClient.invalidateQueries({ queryKey: ['allLeagues'] })
+      queryClient.invalidateQueries({ queryKey: ['myLeagues'] })
+      showFeedback(`You joined ${data.name}.`, 'success')
+      navigate(`/leagues/${data.id}`)
+    },
+    onError: (err: any) => {
+      setJoinError(err.response?.data?.detail || 'Failed to join league.')
+    },
   })
 
   const formattedLeagues = useMemo(() => {
@@ -25,6 +48,15 @@ export const GlobalLeaguesPage: React.FC = () => {
       createdLabel: format(new Date(league.created_at), 'MMM d, yyyy'),
     }))
   }, [leagues, searchInput])
+
+  const handleJoinClick = (league: LeagueSummary) => {
+    if (league.is_member) {
+      navigate(`/leagues/${league.id}`)
+      return
+    }
+    setJoinError('')
+    setJoinTarget(league)
+  }
 
   return (
     <div className="min-h-screen bg-neutral-light">
@@ -79,13 +111,20 @@ export const GlobalLeaguesPage: React.FC = () => {
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-DEFAULT/70">
                     Created
                   </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-neutral-DEFAULT/70">
+                    Action
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-DEFAULT/10">
                 {formattedLeagues.map((league) => (
                   <tr key={league.id} className="hover:bg-neutral-light/60 transition-colors">
                     <td className="px-4 py-3 text-sm text-neutral-DEFAULT">
-                      <span className="inline-flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/leagues/${league.id}`)}
+                        className="inline-flex items-center gap-2 hover:text-primary-medium transition-colors"
+                      >
                         {league.name}
                         {league.is_private && (
                           <span title="Password protected" aria-label="Private league">
@@ -104,10 +143,29 @@ export const GlobalLeaguesPage: React.FC = () => {
                             </svg>
                           </span>
                         )}
-                      </span>
+                      </button>
                     </td>
                     <td className="px-4 py-3 text-sm text-neutral-DEFAULT">{league.member_count}</td>
                     <td className="px-4 py-3 text-sm text-neutral-DEFAULT/80">{league.createdLabel}</td>
+                    <td className="px-4 py-3 text-sm text-right">
+                      {league.is_member ? (
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/leagues/${league.id}`)}
+                          className="text-primary-medium hover:text-primary-dark font-medium"
+                        >
+                          View
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleJoinClick(league)}
+                          className="text-primary-medium hover:text-primary-dark font-medium"
+                        >
+                          Join
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -115,6 +173,20 @@ export const GlobalLeaguesPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {joinTarget && (
+        <JoinLeagueModal
+          isOpen={Boolean(joinTarget)}
+          leagueName={joinTarget.name}
+          requiresPassword={joinTarget.is_private}
+          isSubmitting={joinMutation.isPending}
+          error={joinError}
+          onClose={() => setJoinTarget(null)}
+          onSubmit={(password) =>
+            joinMutation.mutate({ leagueId: joinTarget.id, password })
+          }
+        />
+      )}
     </div>
   )
 }

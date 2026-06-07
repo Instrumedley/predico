@@ -111,7 +111,7 @@ export const MiniMenu: React.FC<MiniMenuProps> = ({ activeOption = 'dashboard', 
                       key={league.id}
                       onClick={() => {
                         setIsLeaguesMenuOpen(false)
-                        onOptionChange?.('leagues')
+                        navigate(`/leagues/${league.id}`)
                       }}
                       className="block w-full text-left px-4 py-2 text-sm text-neutral-DEFAULT hover:bg-neutral-light transition-colors"
                     >

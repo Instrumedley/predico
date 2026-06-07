@@ -1,8 +1,10 @@
 """
 League endpoints for creating and browsing prediction leagues.
 """
+import re
 from typing import List, Optional
 
+from email_validator import EmailNotValidError, validate_email
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,7 +13,18 @@ from sqlalchemy.orm import selectinload
 from app.core.security import get_current_user
 from app.db.database import get_db
 from app.db.models import League, LeagueMember, User
-from app.schemas.league import LeagueCreate, LeagueCreateResponse, LeagueSummary
+from app.schemas.league import (
+    JoinLeagueRequest,
+    LeagueCreate,
+    LeagueCreateResponse,
+    LeagueDetail,
+    LeagueInviteRequest,
+    LeagueInviteResponse,
+    LeagueMemberRanking,
+    LeagueSummary,
+)
+from app.services.email_service import email_service
+from app.services.league_service import get_league_rankings
 
 router = APIRouter()
 
@@ -26,6 +39,37 @@ def _league_summary(league: League, member_count: int, is_member: bool) -> Leagu
         member_count=member_count,
         is_member=is_member,
     )
+
+
+def _normalize_emails(raw_emails: List[str]) -> List[str]:
+    seen = set()
+    normalized: List[str] = []
+    for raw in raw_emails:
+        for part in re.split(r"[,;\s]+", raw):
+            email = part.strip().lower()
+            if not email or email in seen:
+                continue
+            try:
+                validated = validate_email(email, check_deliverability=False)
+                normalized_email = validated.email
+            except EmailNotValidError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid email address: {email}",
+                ) from exc
+            seen.add(normalized_email)
+            normalized.append(normalized_email)
+    if not normalized:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Provide at least one valid email address",
+        )
+    if len(normalized) > 20:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You can invite up to 20 email addresses at once",
+        )
+    return normalized
 
 
 async def _get_member_counts(db: AsyncSession, league_ids: List[int]) -> dict[int, int]:
@@ -49,6 +93,14 @@ async def _get_user_memberships(db: AsyncSession, user_id: int, league_ids: List
         )
     )
     return {row[0] for row in result.all()}
+
+
+async def _build_rankings(db: AsyncSession, league_id: int) -> List[LeagueMemberRanking]:
+    rows = await get_league_rankings(db, league_id)
+    return [
+        LeagueMemberRanking(rank=index, user_id=user_id, username=username, total_points=points)
+        for index, (user_id, username, points) in enumerate(rows, start=1)
+    ]
 
 
 @router.get("/me", response_model=List[LeagueSummary])
@@ -94,6 +146,42 @@ async def list_leagues(
         _league_summary(league, counts.get(league.id, 0), league.id in memberships)
         for league in leagues
     ]
+
+
+@router.get("/{league_id}", response_model=LeagueDetail)
+async def get_league_detail(
+    league_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """League detail with member rankings for league members."""
+    result = await db.execute(select(League).where(League.id == league_id))
+    league = result.scalar_one_or_none()
+    if not league:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="League not found")
+
+    membership = await db.execute(
+        select(LeagueMember).where(
+            LeagueMember.league_id == league_id,
+            LeagueMember.user_id == current_user.id,
+        )
+    )
+    is_member = membership.scalar_one_or_none() is not None
+    member_count = await _get_member_counts(db, [league.id])
+    rankings = await _build_rankings(db, league.id) if is_member else []
+
+    return LeagueDetail(
+        id=league.id,
+        name=league.name,
+        description=league.description,
+        is_private=league.is_private,
+        created_at=league.created_at,
+        created_by=league.created_by,
+        member_count=member_count.get(league.id, 0),
+        is_member=is_member,
+        is_creator=league.created_by == current_user.id,
+        rankings=rankings,
+    )
 
 
 @router.post("", response_model=LeagueCreateResponse, status_code=status.HTTP_201_CREATED)
@@ -144,17 +232,16 @@ async def create_league(
     )
 
 
-@router.post("/{league_id}/join", response_model=LeagueSummary)
+@router.post("/{league_id}/join", response_model=LeagueDetail)
 async def join_league(
     league_id: int,
+    payload: Optional[JoinLeagueRequest] = None,
     invite_code: Optional[str] = Query(None, max_length=50),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Join a public league, or a private league with the correct password."""
-    result = await db.execute(
-        select(League).options(selectinload(League.members)).where(League.id == league_id)
-    )
+    result = await db.execute(select(League).where(League.id == league_id))
     league = result.scalar_one_or_none()
     if not league:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="League not found")
@@ -168,16 +255,72 @@ async def join_league(
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Already a member of this league")
 
+    code = payload.invite_code if payload and payload.invite_code else invite_code
     if league.is_private:
-        if not invite_code or invite_code != league.invite_code:
+        if not code or code != league.invite_code:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid league password")
 
     db.add(LeagueMember(league_id=league.id, user_id=current_user.id))
     await db.commit()
 
-    count_result = await db.execute(
-        select(func.count(LeagueMember.id)).where(LeagueMember.league_id == league.id)
-    )
-    member_count = count_result.scalar_one()
+    member_count = await _get_member_counts(db, [league.id])
+    rankings = await _build_rankings(db, league.id)
 
-    return _league_summary(league, member_count, is_member=True)
+    return LeagueDetail(
+        id=league.id,
+        name=league.name,
+        description=league.description,
+        is_private=league.is_private,
+        created_at=league.created_at,
+        created_by=league.created_by,
+        member_count=member_count.get(league.id, 0),
+        is_member=True,
+        is_creator=league.created_by == current_user.id,
+        rankings=rankings,
+    )
+
+
+@router.post("/{league_id}/invitations", response_model=LeagueInviteResponse)
+async def invite_to_league(
+    league_id: int,
+    payload: LeagueInviteRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Send league invitation emails. Only the league creator can invite."""
+    result = await db.execute(select(League).where(League.id == league_id))
+    league = result.scalar_one_or_none()
+    if not league:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="League not found")
+
+    if league.created_by != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the league creator can send invites")
+
+    emails = _normalize_emails(payload.emails)
+    sent: List[str] = []
+    failed: List[str] = []
+
+    for email in emails:
+        user_result = await db.execute(select(User).where(User.email == email))
+        invitee = user_result.scalar_one_or_none()
+        success = await email_service.send_league_invite_email(
+            email=email,
+            league_name=league.name,
+            league_description=league.description,
+            inviter_name=current_user.username,
+            league_id=league.id,
+            is_private=league.is_private,
+            recipient_name=invitee.username if invitee else None,
+        )
+        if success:
+            sent.append(email)
+        else:
+            failed.append(email)
+
+    if not sent and failed:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Failed to send invitation emails. Check email configuration.",
+        )
+
+    return LeagueInviteResponse(sent=sent, failed=failed)
