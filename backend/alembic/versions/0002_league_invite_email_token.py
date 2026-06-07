@@ -1,7 +1,7 @@
 """Add email and token fields to league invitations.
 
 Revision ID: 0002_league_invite_email_token
-Revises: 0001_initial_schema
+Revises: 0001_initial
 Create Date: 2026-05-28
 
 """
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 revision: str = "0002_league_invite_email_token"
-down_revision: Union[str, None] = "0001_initial_schema"
+down_revision: Union[str, None] = "0001_initial"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
