@@ -238,6 +238,7 @@ If you outgrow Heroku later, revisit the archived Terraform or simplify to a sin
 | Emails not arriving | Verify sender in SendGrid; check `heroku logs` for SendGrid errors |
 | `too many connections` | Lower `DB_POOL_SIZE`; Essential-0 max is 20 |
 | Migrations failed | `heroku run alembic upgrade head -a predico-api` |
+| Seed ghost leagues/users | `heroku run python scripts/seed_ghost_activity.py -a predico-api` (see script docstring) |
 | Cold starts | Switch from Eco to Basic dyno (`heroku ps:type basic`) |
 
 ---
