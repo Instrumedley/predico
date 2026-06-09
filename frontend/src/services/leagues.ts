@@ -20,6 +20,28 @@ export interface LeagueMemberRanking {
   total_points: number
 }
 
+export interface LeagueMemberPrediction {
+  id: number
+  predicted_home_score: number
+  predicted_away_score: number
+  points: number
+  game: {
+    id: number
+    status: string
+    match_date?: string | null
+    scheduled_at: string
+    home_team: { id: number; name: string; country_code: string }
+    away_team: { id: number; name: string; country_code: string }
+  }
+}
+
+export interface LeagueMemberPredictionsResponse {
+  user_id: number
+  username: string
+  total_points: number
+  predictions: LeagueMemberPrediction[]
+}
+
 export interface LeagueDetail {
   id: string
   name: string
@@ -63,6 +85,16 @@ export async function getAllLeagues(search?: string): Promise<LeagueSummary[]> {
 
 export async function getLeagueDetail(leagueId: string): Promise<LeagueDetail> {
   const response = await apiClient.get<LeagueDetail>(`/api/v1/leagues/${leagueId}`)
+  return response.data
+}
+
+export async function getLeagueMemberPredictions(
+  leagueId: string,
+  userId: number
+): Promise<LeagueMemberPredictionsResponse> {
+  const response = await apiClient.get<LeagueMemberPredictionsResponse>(
+    `/api/v1/leagues/${leagueId}/members/${userId}/predictions`
+  )
   return response.data
 }
 

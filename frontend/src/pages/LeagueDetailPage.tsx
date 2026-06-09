@@ -3,16 +3,17 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { NavBar } from '@/components/layout'
-import { JoinLeagueModal } from '@/components/leagues'
-import { useAuth } from '@/contexts/AuthContext'
-import { useFeedback } from '@/contexts/FeedbackContext'
+import { JoinLeagueModal, LeagueMemberPredictionsModal } from '@/components/leagues'
 import {
   acceptLeagueInvite,
   getLeagueDetail,
+  getLeagueMemberPredictions,
   inviteToLeague,
   joinLeague,
   parseEmailInput,
 } from '@/services/leagues'
+import { useAuth } from '@/contexts/AuthContext'
+import { useFeedback } from '@/contexts/FeedbackContext'
 
 export const LeagueDetailPage: React.FC = () => {
   const { leagueId } = useParams<{ leagueId: string }>()
@@ -29,11 +30,23 @@ export const LeagueDetailPage: React.FC = () => {
   const [joinError, setJoinError] = useState('')
   const [inviteInput, setInviteInput] = useState('')
   const [inviteError, setInviteError] = useState('')
+  const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null)
+  const [selectedMemberName, setSelectedMemberName] = useState('')
 
   const { data: league, isLoading, error } = useQuery({
     queryKey: ['leagueDetail', leaguePublicId],
     queryFn: () => getLeagueDetail(leaguePublicId),
     enabled: Boolean(leaguePublicId),
+  })
+
+  const {
+    data: memberPredictions,
+    isLoading: memberPredictionsLoading,
+    error: memberPredictionsError,
+  } = useQuery({
+    queryKey: ['leagueMemberPredictions', leaguePublicId, selectedMemberId],
+    queryFn: () => getLeagueMemberPredictions(leaguePublicId, selectedMemberId!),
+    enabled: Boolean(leaguePublicId && selectedMemberId !== null),
   })
 
   const joinMutation = useMutation({
@@ -124,6 +137,16 @@ export const LeagueDetailPage: React.FC = () => {
     inviteMutation.mutate(parsedEmails)
   }
 
+  const handleMemberClick = (userId: number, username: string) => {
+    setSelectedMemberId(userId)
+    setSelectedMemberName(username)
+  }
+
+  const handleCloseMemberPredictions = () => {
+    setSelectedMemberId(null)
+    setSelectedMemberName('')
+  }
+
   if (!leaguePublicId) {
     return (
       <div className="min-h-screen bg-neutral-light">
@@ -200,6 +223,9 @@ export const LeagueDetailPage: React.FC = () => {
               <div className="mt-8 bg-white rounded-lg border border-neutral-DEFAULT/20 shadow-sm overflow-hidden">
                 <div className="px-4 py-3 border-b border-neutral-DEFAULT/10 bg-neutral-light">
                   <h2 className="text-sm font-semibold text-neutral-DEFAULT">League ranking</h2>
+                  <p className="mt-1 text-xs text-neutral-DEFAULT/60">
+                    Click a player to view their predictions.
+                  </p>
                 </div>
                 {league.rankings.length === 0 ? (
                   <div className="px-4 py-8 text-center text-sm text-neutral-DEFAULT/60">
@@ -230,10 +256,16 @@ export const LeagueDetailPage: React.FC = () => {
                           >
                             <td className="px-4 py-3 text-sm text-neutral-DEFAULT">{entry.rank}</td>
                             <td className="px-4 py-3 text-sm text-neutral-DEFAULT">
-                              {entry.username}
-                              {isCurrentUser && (
-                                <span className="ml-2 text-xs text-primary-medium">You</span>
-                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleMemberClick(entry.user_id, entry.username)}
+                                className="inline-flex items-center gap-1 font-medium text-primary-medium hover:text-primary-dark hover:underline transition-colors"
+                              >
+                                {entry.username}
+                                {isCurrentUser && (
+                                  <span className="text-xs text-primary-medium no-underline">(You)</span>
+                                )}
+                              </button>
                             </td>
                             <td className="px-4 py-3 text-sm text-neutral-DEFAULT text-right font-medium">
                               {entry.total_points}
@@ -313,6 +345,20 @@ export const LeagueDetailPage: React.FC = () => {
           onSubmit={(password) => joinMutation.mutate(password)}
         />
       )}
+
+      <LeagueMemberPredictionsModal
+        isOpen={selectedMemberId !== null}
+        isLoading={memberPredictionsLoading}
+        username={selectedMemberName}
+        error={
+          memberPredictionsError
+            ? (memberPredictionsError as any).response?.data?.detail ||
+              'Failed to load predictions.'
+            : undefined
+        }
+        data={memberPredictions}
+        onClose={handleCloseMemberPredictions}
+      />
     </div>
   )
 }

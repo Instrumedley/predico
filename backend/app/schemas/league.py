@@ -1,7 +1,7 @@
 """
 Pydantic schemas for league endpoints.
 """
-from datetime import datetime
+from datetime import date, datetime
 from typing import List, Optional
 from uuid import UUID
 
@@ -84,3 +84,33 @@ class LeagueCreateResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class LeagueMemberPredictionTeam(BaseModel):
+    id: int
+    name: str
+    country_code: str
+
+
+class LeagueMemberPredictionGame(BaseModel):
+    id: int
+    status: str
+    match_date: Optional[date] = None
+    scheduled_at: datetime
+    home_team: LeagueMemberPredictionTeam
+    away_team: LeagueMemberPredictionTeam
+
+
+class LeagueMemberPrediction(BaseModel):
+    id: int
+    predicted_home_score: int
+    predicted_away_score: int
+    points: int
+    game: LeagueMemberPredictionGame
+
+
+class LeagueMemberPredictionsResponse(BaseModel):
+    user_id: int
+    username: str
+    total_points: int
+    predictions: List[LeagueMemberPrediction] = []

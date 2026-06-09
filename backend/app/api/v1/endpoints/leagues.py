@@ -10,10 +10,12 @@ from email_validator import EmailNotValidError, validate_email
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.security import get_current_user
 from app.db.database import get_db
-from app.db.models import League, LeagueMember, User
+from app.db.models import Game, League, LeagueMember, Prediction, User
+from app.api.v1.endpoints.games import game_to_response
 from app.schemas.league import (
     AcceptLeagueInviteRequest,
     JoinLeagueRequest,
@@ -22,6 +24,10 @@ from app.schemas.league import (
     LeagueDetail,
     LeagueInviteRequest,
     LeagueInviteResponse,
+    LeagueMemberPrediction,
+    LeagueMemberPredictionGame,
+    LeagueMemberPredictionTeam,
+    LeagueMemberPredictionsResponse,
     LeagueMemberRanking,
     LeagueSummary,
 )
@@ -109,6 +115,41 @@ async def _get_user_memberships(db: AsyncSession, user_id: int, league_ids: List
         )
     )
     return {row[0] for row in result.all()}
+
+
+async def _require_league_member(
+    db: AsyncSession,
+    league_id: int,
+    user_id: int,
+    *,
+    detail: str = "You must be a member of this league",
+) -> None:
+    result = await db.execute(
+        select(LeagueMember.id).where(
+            LeagueMember.league_id == league_id,
+            LeagueMember.user_id == user_id,
+        )
+    )
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
+
+
+def _prediction_to_league_member_prediction(prediction: Prediction) -> LeagueMemberPrediction:
+    game_response = game_to_response(prediction.game)
+    return LeagueMemberPrediction(
+        id=prediction.id,
+        predicted_home_score=prediction.predicted_home_score,
+        predicted_away_score=prediction.predicted_away_score,
+        points=prediction.points,
+        game=LeagueMemberPredictionGame(
+            id=game_response.id,
+            status=game_response.status,
+            match_date=game_response.match_date,
+            scheduled_at=game_response.scheduled_at,
+            home_team=LeagueMemberPredictionTeam.model_validate(game_response.home_team),
+            away_team=LeagueMemberPredictionTeam.model_validate(game_response.away_team),
+        ),
+    )
 
 
 async def _build_rankings(db: AsyncSession, league_id: int) -> List[LeagueMemberRanking]:
@@ -263,6 +304,55 @@ async def get_league_detail(
     """League detail with member rankings for league members."""
     league = await _get_league_or_404(db, league_id)
     return await _build_league_detail(db, league, current_user)
+
+
+@router.get("/{league_id}/members/{user_id}/predictions", response_model=LeagueMemberPredictionsResponse)
+async def get_league_member_predictions(
+    league_id: UUID,
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return a league member's predictions for other members of the same league."""
+    league = await _get_league_or_404(db, league_id)
+    await _require_league_member(db, league.id, current_user.id)
+
+    target_user_result = await db.execute(select(User).where(User.id == user_id))
+    target_user = target_user_result.scalar_one_or_none()
+    if not target_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    await _require_league_member(
+        db,
+        league.id,
+        user_id,
+        detail="User is not a member of this league",
+    )
+
+    predictions_query = (
+        select(Prediction)
+        .where(Prediction.user_id == user_id)
+        .options(
+            selectinload(Prediction.game).selectinload(Game.home_team),
+            selectinload(Prediction.game).selectinload(Game.away_team),
+            selectinload(Prediction.game).selectinload(Game.round),
+            selectinload(Prediction.game).selectinload(Game.group),
+            selectinload(Prediction.game).selectinload(Game.stadium),
+        )
+        .join(Game, Prediction.game_id == Game.id)
+        .order_by(Game.match_date.asc(), Game.match_time.asc())
+    )
+    predictions_result = await db.execute(predictions_query)
+    predictions = predictions_result.scalars().all()
+
+    total_points = sum(prediction.points for prediction in predictions)
+
+    return LeagueMemberPredictionsResponse(
+        user_id=target_user.id,
+        username=target_user.username,
+        total_points=total_points,
+        predictions=[_prediction_to_league_member_prediction(prediction) for prediction in predictions],
+    )
 
 
 @router.post("", response_model=LeagueCreateResponse, status_code=status.HTTP_201_CREATED)
