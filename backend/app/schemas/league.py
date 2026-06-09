@@ -114,3 +114,35 @@ class LeagueMemberPredictionsResponse(BaseModel):
     username: str
     total_points: int
     predictions: List[LeagueMemberPrediction] = []
+
+
+class LeagueProgressMatchTeam(BaseModel):
+    id: int
+    name: str
+    country_code: str
+    flag_emoji: Optional[str] = None
+
+
+class LeagueProgressMatch(BaseModel):
+    game_id: int
+    match_number: Optional[int] = None
+    match_date: Optional[date] = None
+    home_team: LeagueProgressMatchTeam
+    away_team: LeagueProgressMatchTeam
+    label: str
+
+
+class LeagueProgressMember(BaseModel):
+    user_id: int
+    username: str
+    rank: int
+    total_points: int
+    is_top_five: bool
+    is_current_user: bool
+    points: List[int]
+
+
+class LeagueProgressResponse(BaseModel):
+    matches: List[LeagueProgressMatch]
+    members: List[LeagueProgressMember]
+    has_scored_matches: bool

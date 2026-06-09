@@ -12,6 +12,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.config import settings
 from app.core.security import get_current_user
 from app.db.database import get_db
 from app.db.models import Game, League, LeagueMember, Prediction, User
@@ -29,8 +30,10 @@ from app.schemas.league import (
     LeagueMemberPredictionTeam,
     LeagueMemberPredictionsResponse,
     LeagueMemberRanking,
+    LeagueProgressResponse,
     LeagueSummary,
 )
+from app.services.league_progress_service import build_league_progress
 from app.services.email_service import email_service
 from app.services.league_service import (
     accept_league_invitation,
@@ -314,6 +317,21 @@ async def get_league_detail(
     """League detail with member rankings for league members."""
     league = await _get_league_or_404(db, league_id)
     return await _build_league_detail(db, league, current_user)
+
+
+@router.get("/{league_id}/progress", response_model=LeagueProgressResponse)
+async def get_league_progress(
+    league_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Cumulative points by finished match for league members (feature-flagged)."""
+    if not settings.LEAGUE_PROGRESS_CHART_ENABLED:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    league = await _get_league_or_404(db, league_id)
+    await _require_league_member(db, league.id, current_user.id)
+    return await build_league_progress(db, league.id, current_user.id)
 
 
 @router.get("/{league_id}/members/{user_id}/predictions", response_model=LeagueMemberPredictionsResponse)

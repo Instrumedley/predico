@@ -55,6 +55,31 @@ export interface LeagueDetail {
   rankings: LeagueMemberRanking[]
 }
 
+export interface LeagueProgressMatch {
+  game_id: number
+  match_number?: number | null
+  match_date?: string | null
+  home_team: { id: number; name: string; country_code: string; flag_emoji?: string | null }
+  away_team: { id: number; name: string; country_code: string; flag_emoji?: string | null }
+  label: string
+}
+
+export interface LeagueProgressMember {
+  user_id: number
+  username: string
+  rank: number
+  total_points: number
+  is_top_five: boolean
+  is_current_user: boolean
+  points: number[]
+}
+
+export interface LeagueProgressResponse {
+  matches: LeagueProgressMatch[]
+  members: LeagueProgressMember[]
+  has_scored_matches: boolean
+}
+
 export interface CreateLeaguePayload {
   name: string
   description?: string
@@ -85,6 +110,11 @@ export async function getAllLeagues(search?: string): Promise<LeagueSummary[]> {
 
 export async function getLeagueDetail(leagueId: string): Promise<LeagueDetail> {
   const response = await apiClient.get<LeagueDetail>(`/api/v1/leagues/${leagueId}`)
+  return response.data
+}
+
+export async function getLeagueProgress(leagueId: string): Promise<LeagueProgressResponse> {
+  const response = await apiClient.get<LeagueProgressResponse>(`/api/v1/leagues/${leagueId}/progress`)
   return response.data
 }
 

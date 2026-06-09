@@ -36,6 +36,7 @@ env/
 # Environment variables
 .env
 .env.local
+.chart_demo_snapshot.json
 
 # Testing
 .pytest_cache/

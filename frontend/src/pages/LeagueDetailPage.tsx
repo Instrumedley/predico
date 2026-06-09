@@ -3,15 +3,17 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { NavBar } from '@/components/layout'
-import { JoinLeagueModal, LeagueMemberPredictionsModal } from '@/components/leagues'
+import { JoinLeagueModal, LeagueMemberPredictionsModal, LeagueProgressChartModal, LeagueProgressChartPreview } from '@/components/leagues'
 import {
   acceptLeagueInvite,
   getLeagueDetail,
   getLeagueMemberPredictions,
+  getLeagueProgress,
   inviteToLeague,
   joinLeague,
   parseEmailInput,
 } from '@/services/leagues'
+import { getFeatureFlags } from '@/services/config'
 import { useAuth } from '@/contexts/AuthContext'
 import { useFeedback } from '@/contexts/FeedbackContext'
 
@@ -32,6 +34,15 @@ export const LeagueDetailPage: React.FC = () => {
   const [inviteError, setInviteError] = useState('')
   const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null)
   const [selectedMemberName, setSelectedMemberName] = useState('')
+  const [progressOpen, setProgressOpen] = useState(false)
+
+  const { data: featureFlags } = useQuery({
+    queryKey: ['featureFlags'],
+    queryFn: getFeatureFlags,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const leagueProgressChartEnabled = featureFlags?.league_progress_chart ?? false
 
   const { data: league, isLoading, error } = useQuery({
     queryKey: ['leagueDetail', leaguePublicId],
@@ -47,6 +58,16 @@ export const LeagueDetailPage: React.FC = () => {
     queryKey: ['leagueMemberPredictions', leaguePublicId, selectedMemberId],
     queryFn: () => getLeagueMemberPredictions(leaguePublicId, selectedMemberId!),
     enabled: Boolean(leaguePublicId && selectedMemberId !== null),
+  })
+
+  const {
+    data: leagueProgress,
+    isLoading: leagueProgressLoading,
+    error: leagueProgressError,
+  } = useQuery({
+    queryKey: ['leagueProgress', leaguePublicId],
+    queryFn: () => getLeagueProgress(leaguePublicId),
+    enabled: Boolean(leaguePublicId && leagueProgressChartEnabled && league?.is_member),
   })
 
   const joinMutation = useMutation({
@@ -279,6 +300,20 @@ export const LeagueDetailPage: React.FC = () => {
               </div>
             )}
 
+            {league.is_member && leagueProgressChartEnabled && (
+              <LeagueProgressChartPreview
+                isLoading={leagueProgressLoading}
+                data={leagueProgress}
+                error={
+                  leagueProgressError
+                    ? (leagueProgressError as any).response?.data?.detail ||
+                      'Failed to load league progress.'
+                    : undefined
+                }
+                onExpand={() => setProgressOpen(true)}
+              />
+            )}
+
             {league.is_creator && (
               <div className="mt-8 bg-white rounded-lg border border-neutral-DEFAULT/20 shadow-sm p-6">
                 <h2 className="text-lg font-semibold text-neutral-DEFAULT">Invite friends</h2>
@@ -358,6 +393,20 @@ export const LeagueDetailPage: React.FC = () => {
         }
         data={memberPredictions}
         onClose={handleCloseMemberPredictions}
+      />
+
+      <LeagueProgressChartModal
+        isOpen={progressOpen}
+        isLoading={leagueProgressLoading}
+        leagueName={league?.name ?? 'League'}
+        error={
+          leagueProgressError
+            ? (leagueProgressError as any).response?.data?.detail ||
+              'Failed to load league progress.'
+            : undefined
+        }
+        data={leagueProgress}
+        onClose={() => setProgressOpen(false)}
       />
     </div>
   )

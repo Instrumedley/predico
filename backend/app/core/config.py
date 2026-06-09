@@ -136,6 +136,9 @@ class Settings(BaseSettings):
         """True when transactional emails are sent via a real provider."""
         return self.EMAIL_ENABLED and self.EMAIL_BACKEND in ("ses", "sendgrid")
     
+    # Feature flags
+    LEAGUE_PROGRESS_CHART_ENABLED: bool = False
+
     # Cloudflare
     CLOUDFLARE_ZONE_ID: Optional[str] = None
     
