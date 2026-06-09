@@ -1,8 +1,9 @@
 """
 Update group-stage kickoff times from official FIFA schedule data.
 
-Times were taken from FIFA.com with country=SE (Sweden local display) and converted
-to venue-local kickoff + UTC scheduled_at for canonical lock-in logic.
+Times were taken from FIFA.com (country=SE) and converted with
+fifa_schedule_time_to_kickoff_utc() — afternoon/evening values are UTC;
+early-morning values are Sweden local (CEST).
 
 Usage:
     python -m scripts.scrape_match_times
@@ -29,7 +30,7 @@ from sqlalchemy.orm import selectinload
 from app.db.database import AsyncSessionLocal
 from app.db.models.game import Game
 from app.utils.match_time import (
-    sweden_local_to_kickoff_utc,
+    fifa_schedule_time_to_kickoff_utc,
     utc_to_venue_local,
     parse_timezone_offset,
 )
@@ -42,8 +43,8 @@ def build_kickoff_lookup() -> Dict[Tuple[str, str], Tuple[datetime, object, str]
     """
     lookup: Dict[Tuple[str, str], Tuple[datetime, object, str]] = {}
 
-    for home, away, sweden_date, hour, minute, venue_offset in FIFA_GROUP_STAGE_KICKOFFS:
-        kickoff_utc = sweden_local_to_kickoff_utc(sweden_date, hour, minute)
+    for home, away, schedule_date, hour, minute, venue_offset in FIFA_GROUP_STAGE_KICKOFFS:
+        kickoff_utc = fifa_schedule_time_to_kickoff_utc(schedule_date, hour, minute)
         match_time, timezone = utc_to_venue_local(kickoff_utc, venue_offset)
         lookup[(home, away)] = (kickoff_utc, match_time, timezone)
 

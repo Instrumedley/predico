@@ -1,21 +1,24 @@
 """
-2026 World Cup group-stage kickoff times from FIFA.com (country=SE, Sweden local).
+2026 World Cup group-stage kickoff times from FIFA.com (country=SE schedule).
 
-FIFA displays times in the visitor's local timezone (Sweden = UTC+2 in June).
-Each entry: (home_team, away_team, sweden_date, hour, minute, venue_utc_offset)
-where venue_utc_offset uses CDT/EDT/PDT offsets for June 2026 host cities.
+Each entry mirrors the FIFA fixtures page grouping:
+(home_team, away_team, fifa_schedule_date, hour, minute, venue_utc_offset)
+
+Times are parsed with fifa_schedule_time_to_kickoff_utc() — afternoon/evening
+values are UTC; early-morning values are Sweden local (CEST). Venue offsets follow
+the Wikipedia/FIFA host-city schedule (e.g. Mexico City UTC-6 in June).
 """
 from datetime import date
 
 # fmt: off
 FIFA_GROUP_STAGE_KICKOFFS = [
     # Group A
-    ("Mexico", "S. Africa", date(2026, 6, 11), 19, 0, -5),
-    ("South Korea", "Czechia", date(2026, 6, 12), 2, 0, -5),
+    ("Mexico", "S. Africa", date(2026, 6, 11), 19, 0, -6),
+    ("South Korea", "Czechia", date(2026, 6, 12), 2, 0, -6),
     ("S. Africa", "Czechia", date(2026, 6, 18), 16, 0, -4),
-    ("Mexico", "South Korea", date(2026, 6, 19), 1, 0, -5),
-    ("Czechia", "Mexico", date(2026, 6, 25), 1, 0, -5),
-    ("S. Africa", "South Korea", date(2026, 6, 25), 1, 0, -5),
+    ("Mexico", "South Korea", date(2026, 6, 19), 1, 0, -6),
+    ("Czechia", "Mexico", date(2026, 6, 25), 1, 0, -6),
+    ("S. Africa", "South Korea", date(2026, 6, 25), 1, 0, -6),
     # Group B
     ("Canada", "Bosnia & Herzegovina", date(2026, 6, 12), 19, 0, -4),
     ("Qatar", "Switzerland", date(2026, 6, 13), 19, 0, -7),
@@ -63,7 +66,7 @@ FIFA_GROUP_STAGE_KICKOFFS = [
     ("Saudi Arabia", "Uruguay", date(2026, 6, 15), 22, 0, -4),
     ("Cape Verde", "Uruguay", date(2026, 6, 21), 22, 0, -4),
     ("Spain", "Saudi Arabia", date(2026, 6, 21), 16, 0, -4),
-    ("Uruguay", "Spain", date(2026, 6, 27), 0, 0, -5),
+    ("Uruguay", "Spain", date(2026, 6, 27), 0, 0, -6),
     ("Cape Verde", "Saudi Arabia", date(2026, 6, 27), 0, 0, -5),
     # Group I
     ("France", "Senegal", date(2026, 6, 16), 19, 0, -4),
@@ -81,8 +84,8 @@ FIFA_GROUP_STAGE_KICKOFFS = [
     ("Algeria", "Austria", date(2026, 6, 28), 2, 0, -5),
     # Group K
     ("Portugal", "DR Congo", date(2026, 6, 17), 17, 0, -5),
-    ("Uzbekistan", "Colombia", date(2026, 6, 18), 2, 0, -5),
-    ("DR Congo", "Colombia", date(2026, 6, 24), 2, 0, -5),
+    ("Uzbekistan", "Colombia", date(2026, 6, 18), 2, 0, -6),
+    ("DR Congo", "Colombia", date(2026, 6, 24), 2, 0, -6),
     ("Portugal", "Uzbekistan", date(2026, 6, 24), 17, 0, -5),
     ("Colombia", "Portugal", date(2026, 6, 27), 23, 30, -4),
     ("DR Congo", "Uzbekistan", date(2026, 6, 27), 23, 30, -4),

@@ -51,15 +51,33 @@ def get_match_datetime_utc(
     return local_datetime - timedelta(hours=tz_offset_hours)
 
 
+def fifa_schedule_time_to_kickoff_utc(
+    schedule_date: date,
+    hour: int,
+    minute: int,
+) -> datetime:
+    """
+    Convert a time from FIFA.com's schedule feed to naive UTC kickoff.
+
+    FIFA fixture data mixes two representations in the HTML/API feed:
+    - Afternoon/evening values (hour >= 12) are UTC kickoff times. The site
+      adds +2h for Sweden (CEST) in the browser, e.g. 19:00 UTC → 21:00 in Sweden.
+    - Early-morning values (hour < 12) are already shown in the visitor's local
+      timezone (Sweden when country=SE), e.g. 02:00 in Sweden → 00:00 UTC.
+    """
+    if hour >= 12:
+        return datetime.combine(schedule_date, time(hour, minute))
+
+    sweden_local = datetime.combine(schedule_date, time(hour, minute))
+    return sweden_local - timedelta(hours=2)
+
+
 def sweden_local_to_kickoff_utc(
     sweden_date: date,
     sweden_hour: int,
     sweden_minute: int,
 ) -> datetime:
-    """
-    Convert a kickoff time shown on FIFA.com for Sweden (CEST, UTC+2 in June)
-    to naive UTC.
-    """
+    """Convert an explicit Sweden (CEST, UTC+2) kickoff display time to UTC."""
     sweden_local = datetime.combine(sweden_date, time(sweden_hour, sweden_minute))
     return sweden_local - timedelta(hours=2)
 
