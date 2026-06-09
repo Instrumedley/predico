@@ -141,7 +141,7 @@ async def get_games(
     if conditions:
         query = query.where(and_(*conditions))
     
-    query = query.order_by(Game.scheduled_at.asc()).limit(limit).offset(offset)
+    query = query.order_by(Game.match_date.asc(), Game.match_time.asc()).limit(limit).offset(offset)
     
     result = await db.execute(query)
     games = result.scalars().all()
@@ -213,7 +213,7 @@ async def get_latest_games(
         selectinload(Game.group)
     ).where(
         Game.status == GameStatus.FINISHED
-    ).order_by(Game.scheduled_at.desc()).limit(limit)
+    ).order_by(Game.match_date.desc(), Game.match_time.desc()).limit(limit)
     
     result = await db.execute(query)
     games = result.scalars().all()

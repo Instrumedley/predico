@@ -24,10 +24,16 @@ def test_mexico_opening_match_from_fifa_schedule():
     assert sweden == datetime(2026, 6, 11, 19, 0)
 
 
-def test_early_morning_fifa_schedule_is_sweden_local():
-    # FIFA feed: 02:00 Sweden on 12 June → 00:00 UTC
+def test_early_morning_fifa_schedule_is_utc():
+    # FIFA feed: 02:00 UTC on 12 June → 04:00 in Sweden, 20:00 on 11 June at UTC-6
     kickoff = fifa_schedule_time_to_kickoff_utc(date(2026, 6, 12), 2, 0)
-    assert kickoff == datetime(2026, 6, 12, 0, 0)
+    assert kickoff == datetime(2026, 6, 12, 2, 0)
+
+    venue_utc = get_match_datetime_utc(date(2026, 6, 11), time(20, 0), "UTC-6")
+    assert venue_utc == datetime(2026, 6, 12, 2, 0)
+
+    sweden = sweden_local_to_kickoff_utc(date(2026, 6, 12), 4, 0)
+    assert sweden == datetime(2026, 6, 12, 2, 0)
 
 
 def test_prediction_lock_one_hour_before_kickoff():

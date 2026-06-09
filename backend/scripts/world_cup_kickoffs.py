@@ -4,8 +4,8 @@
 Each entry mirrors the FIFA fixtures page grouping:
 (home_team, away_team, fifa_schedule_date, hour, minute, venue_utc_offset)
 
-Times are parsed with fifa_schedule_time_to_kickoff_utc() — afternoon/evening
-values are UTC; early-morning values are Sweden local (CEST). Venue offsets follow
+Each hour/minute is the raw UTC kickoff from the FIFA fixtures feed (country=SE).
+The FIFA site adds +2h for Sweden (CEST) in the browser. Venue offsets follow
 the Wikipedia/FIFA host-city schedule (e.g. Mexico City UTC-6 in June).
 """
 from datetime import date

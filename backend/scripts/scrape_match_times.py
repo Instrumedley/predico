@@ -1,9 +1,9 @@
 """
 Update group-stage kickoff times from official FIFA schedule data.
 
-Times were taken from FIFA.com (country=SE) and converted with
-fifa_schedule_time_to_kickoff_utc() — afternoon/evening values are UTC;
-early-morning values are Sweden local (CEST).
+Times were taken from FIFA.com (country=SE) as UTC kickoffs, converted to
+venue-local match_date/match_time/timezone. scheduled_at stores the same
+venue-local wall clock as match_time (not UTC).
 
 Usage:
     python -m scripts.scrape_match_times
@@ -39,14 +39,15 @@ from scripts.world_cup_kickoffs import FIFA_GROUP_STAGE_KICKOFFS
 
 def build_kickoff_lookup() -> Dict[Tuple[str, str], Tuple[datetime, object, str]]:
     """
-    Build lookup: (home_team, away_team) -> (scheduled_at_utc, match_time, timezone)
+    Build lookup: (home_team, away_team) -> (venue_local_dt, match_time, timezone)
     """
     lookup: Dict[Tuple[str, str], Tuple[datetime, object, str]] = {}
 
     for home, away, schedule_date, hour, minute, venue_offset in FIFA_GROUP_STAGE_KICKOFFS:
         kickoff_utc = fifa_schedule_time_to_kickoff_utc(schedule_date, hour, minute)
         match_time, timezone = utc_to_venue_local(kickoff_utc, venue_offset)
-        lookup[(home, away)] = (kickoff_utc, match_time, timezone)
+        venue_local = kickoff_utc + timedelta(hours=parse_timezone_offset(timezone))
+        lookup[(home, away)] = (venue_local, match_time, timezone)
 
     return lookup
 
@@ -78,9 +79,9 @@ async def update_game_times(session) -> None:
             print(f"  ✗ Not found: {home_team_name} vs {away_team_name} ({game.match_date})")
             continue
 
-        kickoff_utc, match_time, timezone = kickoff_info
-        venue_local = kickoff_utc + timedelta(hours=parse_timezone_offset(timezone))
-        game.scheduled_at = kickoff_utc
+        venue_local, match_time, timezone = kickoff_info
+        kickoff_utc = venue_local - timedelta(hours=parse_timezone_offset(timezone))
+        game.scheduled_at = venue_local
         game.match_date = venue_local.date()
         game.match_time = match_time
         game.timezone = timezone

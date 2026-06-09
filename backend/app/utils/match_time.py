@@ -1,8 +1,10 @@
 """
 Match kickoff and prediction deadline helpers.
 
-All stored datetimes are naive UTC. Venue-local kickoff is stored separately as
-match_date + match_time + timezone (fixed UTC offset at kickoff).
+Canonical kickoff instant is derived from match_date + match_time + timezone
+(venue-local wall clock converted to naive UTC). scheduled_at mirrors the same
+venue-local wall clock as match_time for easier DB inspection; do not treat it
+as UTC.
 """
 from __future__ import annotations
 
@@ -59,17 +61,11 @@ def fifa_schedule_time_to_kickoff_utc(
     """
     Convert a time from FIFA.com's schedule feed to naive UTC kickoff.
 
-    FIFA fixture data mixes two representations in the HTML/API feed:
-    - Afternoon/evening values (hour >= 12) are UTC kickoff times. The site
-      adds +2h for Sweden (CEST) in the browser, e.g. 19:00 UTC → 21:00 in Sweden.
-    - Early-morning values (hour < 12) are already shown in the visitor's local
-      timezone (Sweden when country=SE), e.g. 02:00 in Sweden → 00:00 UTC.
+    Values in world_cup_kickoffs.py are the raw UTC kickoff times from the FIFA
+    fixtures feed (country=SE). The site adds +2h for Sweden (CEST) in the
+    browser, e.g. 02:00 UTC → 04:00 Sweden, 19:00 UTC → 21:00 Sweden.
     """
-    if hour >= 12:
-        return datetime.combine(schedule_date, time(hour, minute))
-
-    sweden_local = datetime.combine(schedule_date, time(hour, minute))
-    return sweden_local - timedelta(hours=2)
+    return datetime.combine(schedule_date, time(hour, minute))
 
 
 def sweden_local_to_kickoff_utc(
@@ -93,11 +89,11 @@ def utc_to_venue_local(
 
 def get_game_kickoff_utc(game: "Game") -> Optional[datetime]:
     """Return canonical kickoff instant for a game (naive UTC)."""
-    if game.scheduled_at:
-        return game.scheduled_at
-
     if game.match_date and game.match_time and game.timezone:
         return get_match_datetime_utc(game.match_date, game.match_time, game.timezone)
+
+    if game.scheduled_at:
+        return game.scheduled_at
 
     return None
 
