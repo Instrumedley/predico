@@ -136,6 +136,8 @@ async def _require_league_member(
 
 def _prediction_to_league_member_prediction(prediction: Prediction) -> LeagueMemberPrediction:
     game_response = game_to_response(prediction.game)
+    home_team = game_response.home_team
+    away_team = game_response.away_team
     return LeagueMemberPrediction(
         id=prediction.id,
         predicted_home_score=prediction.predicted_home_score,
@@ -146,8 +148,16 @@ def _prediction_to_league_member_prediction(prediction: Prediction) -> LeagueMem
             status=game_response.status,
             match_date=game_response.match_date,
             scheduled_at=game_response.scheduled_at,
-            home_team=LeagueMemberPredictionTeam.model_validate(game_response.home_team),
-            away_team=LeagueMemberPredictionTeam.model_validate(game_response.away_team),
+            home_team=LeagueMemberPredictionTeam(
+                id=home_team.id,
+                name=home_team.name,
+                country_code=home_team.country_code,
+            ),
+            away_team=LeagueMemberPredictionTeam(
+                id=away_team.id,
+                name=away_team.name,
+                country_code=away_team.country_code,
+            ),
         ),
     )
 
