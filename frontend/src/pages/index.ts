@@ -11,4 +11,5 @@ export { NotFoundPage } from './NotFoundPage'
 export { CreateLeaguePage } from './CreateLeaguePage'
 export { GlobalLeaguesPage } from './GlobalLeaguesPage'
 export { LeagueDetailPage } from './LeagueDetailPage'
+export { FaqPage } from './FaqPage'
 

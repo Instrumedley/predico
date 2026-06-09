@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { NavBar } from '@/components/layout'
+import { NavBar, MiniMenu, type MenuOption } from '@/components/layout'
 import { PredictionRowCard } from '@/components/predictions'
 import { getGames } from '@/services/matches'
 import { getUserPredictions, createOrUpdatePrediction, createOrUpdatePredictionsBatch } from '@/services/predictions'
@@ -19,6 +20,7 @@ interface RoundSection {
 }
 
 export const ScorecardPage: React.FC = () => {
+  const navigate = useNavigate()
   const [collapsedRounds, setCollapsedRounds] = useState<Set<number>>(new Set())
   const [pendingPredictions, setPendingPredictions] = useState<Map<number, { homeScore: number; awayScore: number }>>(
     new Map()
@@ -159,12 +161,22 @@ export const ScorecardPage: React.FC = () => {
 
   const isLoading = gamesLoading || predictionsLoading
 
+  const handleMenuOptionChange = (option: MenuOption) => {
+    if (option === 'dashboard') {
+      navigate('/dashboard')
+    } else if (option === 'scorecard') {
+      navigate('/scorecard')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-neutral-light">
       <NavBar />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <h1 className="text-3xl font-bold text-neutral-DEFAULT mb-6">Scorecard</h1>
+        <MiniMenu activeOption="scorecard" onOptionChange={handleMenuOptionChange} />
+
+        <h1 className="text-3xl font-bold text-neutral-DEFAULT mt-6 mb-6">Scorecard</h1>
 
         {isLoading ? (
           <div className="text-center py-12">

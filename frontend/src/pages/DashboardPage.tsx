@@ -1,10 +1,8 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { NavBar, MiniMenu, DeadlineCard } from '@/components/layout'
+import { NavBar, MiniMenu, DeadlineCard, type MenuOption } from '@/components/layout'
 import { GroupStandingsComponent } from '@/components/standings'
 import { NextMatch, LatestResults } from '@/components/matches'
-
-type MenuOption = 'dashboard' | 'scorecard' | 'leagues'
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate()
@@ -14,6 +12,8 @@ export const DashboardPage: React.FC = () => {
     setActiveMenuOption(option)
     if (option === 'scorecard') {
       navigate('/scorecard')
+    } else if (option === 'dashboard') {
+      navigate('/dashboard')
     }
   }
 

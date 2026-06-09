@@ -19,6 +19,7 @@ import {
   CreateLeaguePage,
   GlobalLeaguesPage,
   LeagueDetailPage,
+  FaqPage,
 } from '@/pages'
 import { AdminRoute } from '@/components/auth/AdminRoute'
 
@@ -51,6 +52,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <ScorecardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/faq"
+            element={
+              <ProtectedRoute>
+                <FaqPage />
               </ProtectedRoute>
             }
           />
