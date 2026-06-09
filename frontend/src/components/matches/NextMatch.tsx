@@ -76,7 +76,7 @@ export const NextMatch: React.FC<NextMatchProps> = ({ data: propData }) => {
                 )}
                 {match.round && (
                   <div className="text-xs text-neutral-DEFAULT/70 mt-1">
-                    Round {match.round.number}
+                    {match.round.name}
                   </div>
                 )}
               </div>

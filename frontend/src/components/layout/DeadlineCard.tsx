@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { getNextMatch } from '@/services/matches'
 import { calculateDeadline } from '@/utils/timezone'
+import { abbreviateCountryName } from '@/utils/countryNames'
+import { getCountryCodeForFlag } from '@/utils/countryFlags'
 
 interface DeadlineCardProps {
   roundNumber?: number
@@ -20,6 +22,8 @@ export const DeadlineCard: React.FC<DeadlineCardProps> = ({
   const [matchInfo, setMatchInfo] = useState<{
     homeTeam: string
     awayTeam: string
+    homeTeamCountryCode: string
+    awayTeamCountryCode: string
     roundName: string
   } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -57,6 +61,8 @@ export const DeadlineCard: React.FC<DeadlineCardProps> = ({
             setMatchInfo({
               homeTeam: match.homeTeam.name,
               awayTeam: match.awayTeam.name,
+              homeTeamCountryCode: match.homeTeam.countryCode,
+              awayTeamCountryCode: match.awayTeam.countryCode,
               roundName: match.round?.name || 'Next Match',
             })
           } else {
@@ -68,6 +74,8 @@ export const DeadlineCard: React.FC<DeadlineCardProps> = ({
             setMatchInfo({
               homeTeam: match.homeTeam.name,
               awayTeam: match.awayTeam.name,
+              homeTeamCountryCode: match.homeTeam.countryCode,
+              awayTeamCountryCode: match.awayTeam.countryCode,
               roundName: match.round?.name || 'Next Match',
             })
           }
@@ -125,7 +133,6 @@ export const DeadlineCard: React.FC<DeadlineCardProps> = ({
   }
 
   const displayRoundName = matchInfo?.roundName || (roundNumber ? `ROUND ${roundNumber}` : 'NEXT MATCH')
-  const displayMatchInfo = matchInfo ? `${matchInfo.homeTeam} vs ${matchInfo.awayTeam}` : null
 
   if (isLoading) {
     return (
@@ -157,8 +164,20 @@ export const DeadlineCard: React.FC<DeadlineCardProps> = ({
       <div className="rounded-xl shadow-lg p-8 text-center min-w-[400px]" style={{ backgroundColor: 'rgba(245, 166, 17, 0.85)' }}>
         <div className="text-white">
           <h2 className="text-2xl font-bold mb-2">NEXT DEADLINE: {displayRoundName}</h2>
-          {displayMatchInfo && (
-            <p className="text-lg mb-4 opacity-90">{displayMatchInfo}</p>
+          {matchInfo && (
+            <div className="flex items-center justify-center gap-2 text-lg mb-4 opacity-90">
+              <span>{abbreviateCountryName(matchInfo.homeTeam)}</span>
+              <span
+                className={`fi fi-${getCountryCodeForFlag(matchInfo.homeTeamCountryCode)} fis`}
+                style={{ fontSize: '1.25rem' }}
+              ></span>
+              <span className="mx-1">vs</span>
+              <span
+                className={`fi fi-${getCountryCodeForFlag(matchInfo.awayTeamCountryCode)} fis`}
+                style={{ fontSize: '1.25rem' }}
+              ></span>
+              <span>{abbreviateCountryName(matchInfo.awayTeam)}</span>
+            </div>
           )}
           
           <div className="flex justify-center items-center space-x-4">
