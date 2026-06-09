@@ -85,6 +85,7 @@ export const authService = {
     is_superuser: boolean
     is_active: boolean
     email_verified: boolean
+    created_at: string
   }> {
     const response = await apiClient.get<{
       id: number
@@ -93,7 +94,40 @@ export const authService = {
       is_superuser: boolean
       is_active: boolean
       email_verified: boolean
+      created_at: string
     }>('/api/v1/users/me')
+    return response.data
+  },
+
+  async updateProfile(data: { username: string }): Promise<{
+    id: number
+    email: string
+    username: string
+    is_superuser: boolean
+    is_active: boolean
+    email_verified: boolean
+    created_at: string
+  }> {
+    const response = await apiClient.patch<{
+      id: number
+      email: string
+      username: string
+      is_superuser: boolean
+      is_active: boolean
+      email_verified: boolean
+      created_at: string
+    }>('/api/v1/users/me', data)
+    return response.data
+  },
+
+  async changePassword(data: {
+    current_password: string
+    new_password: string
+  }): Promise<{ message: string }> {
+    const response = await apiClient.post<{ message: string }>(
+      '/api/v1/users/me/change-password',
+      data
+    )
     return response.data
   },
 }

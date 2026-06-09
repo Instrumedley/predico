@@ -1,5 +1,7 @@
 export { HomePage } from './HomePage'
 export { DashboardPage } from './DashboardPage'
+export { EditProfilePage } from './EditProfilePage'
+export { AccountSettingsPage } from './AccountSettingsPage'
 export { ScorecardPage } from './ScorecardPage'
 export { LoginPage } from './LoginPage'
 export { SignupPage } from './SignupPage'

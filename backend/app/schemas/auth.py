@@ -43,6 +43,11 @@ class UserResponse(UserBase):
         from_attributes = True
 
 
+class UserUpdateProfile(BaseModel):
+    """Schema for updating the current user's profile."""
+    username: str = Field(..., min_length=3, max_length=50)
+
+
 class Token(BaseModel):
     """Schema for authentication token."""
     access_token: str
@@ -120,5 +125,30 @@ class ResetPasswordRequest(BaseModel):
 
 class ResetPasswordResponse(BaseModel):
     """Schema for reset password response."""
+    message: str
+
+
+class ChangePasswordRequest(BaseModel):
+    """Schema for authenticated password change."""
+    current_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=8, max_length=100)
+
+    @field_validator('new_password')
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        """Validate password strength."""
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters long')
+        if not any(c.isupper() for c in v):
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not any(c.islower() for c in v):
+            raise ValueError('Password must contain at least one lowercase letter')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('Password must contain at least one digit')
+        return v
+
+
+class ChangePasswordResponse(BaseModel):
+    """Schema for change password response."""
     message: str
 

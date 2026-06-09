@@ -8,6 +8,8 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import {
   HomePage,
   DashboardPage,
+  EditProfilePage,
+  AccountSettingsPage,
   ScorecardPage,
   LoginPage,
   SignupPage,
@@ -45,6 +47,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <EditProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/account"
+            element={
+              <ProtectedRoute>
+                <AccountSettingsPage />
               </ProtectedRoute>
             }
           />
