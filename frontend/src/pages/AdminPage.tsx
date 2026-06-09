@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { NavBar } from '@/components/layout/NavBar'
+import { AdminSubNav } from '@/components/admin/AdminSubNav'
 import { GroupComponent } from '@/components/standings/GroupComponent'
 import { getStandings } from '@/services/standings'
 import { getGames } from '@/services/matches'
@@ -223,6 +224,8 @@ export const AdminPage: React.FC = () => {
             {resettingAll ? 'Resetting...' : 'Reset All Matches !'}
           </button>
         </div>
+
+        <AdminSubNav />
 
         {gamesByGroup.length === 0 && !standingsLoading && !gamesLoading && (
           <div className="bg-white rounded-lg border border-neutral-DEFAULT/20 shadow-sm p-6">

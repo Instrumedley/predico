@@ -15,6 +15,7 @@ import {
   ForgotPasswordPage,
   ResetPasswordPage,
   AdminPage,
+  AdminUsersPage,
   NotFoundPage,
   CreateLeaguePage,
   GlobalLeaguesPage,
@@ -94,6 +95,14 @@ function App() {
             element={
               <AdminRoute>
                 <AdminPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/adm/users"
+            element={
+              <AdminRoute>
+                <AdminUsersPage />
               </AdminRoute>
             }
           />

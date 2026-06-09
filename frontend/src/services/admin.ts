@@ -75,3 +75,64 @@ export async function resetAllGames(): Promise<ResetAllGamesResponse> {
   return response.data
 }
 
+export interface AdminUserSummary {
+  id: number
+  username: string
+  email: string
+  created_at: string
+  total_points: number
+}
+
+export interface AdminUserListResponse {
+  users: AdminUserSummary[]
+  total: number
+}
+
+export type AdminUserSort = 'username' | 'created_at'
+
+export async function listAdminUsers(
+  q?: string,
+  sort: AdminUserSort = 'username'
+): Promise<AdminUserListResponse> {
+  const params = new URLSearchParams()
+  if (q?.trim()) {
+    params.set('q', q.trim())
+  }
+  params.set('sort', sort)
+  const response = await apiClient.get<AdminUserListResponse>(
+    `${API_PREFIX}/admin/users?${params.toString()}`
+  )
+  return response.data
+}
+
+export interface AdminUserPrediction {
+  id: number
+  predicted_home_score: number
+  predicted_away_score: number
+  points: number
+  is_calculated: boolean
+  game: {
+    id: number
+    status: string
+    home_team: { id: number; name: string; country_code: string }
+    away_team: { id: number; name: string; country_code: string }
+    match_date?: string | null
+    scheduled_at: string
+  }
+}
+
+export interface AdminUserPredictionsResponse {
+  user: AdminUserSummary
+  predictions: AdminUserPrediction[]
+  total_points: number
+}
+
+export async function getAdminUserPredictions(
+  userId: number
+): Promise<AdminUserPredictionsResponse> {
+  const response = await apiClient.get<AdminUserPredictionsResponse>(
+    `${API_PREFIX}/admin/users/${userId}/predictions`
+  )
+  return response.data
+}
+

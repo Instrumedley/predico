@@ -1,16 +1,20 @@
 """
 Admin endpoints for managing games and match results.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from sqlalchemy.orm import selectinload
-from pydantic import BaseModel
+from datetime import datetime
+from typing import List, Optional
 
-from app.db.database import get_db
-from app.db.models import Game, User, Prediction
-from app.db.models.game import GameStatus
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
+from sqlalchemy import func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
 from app.core.security import get_current_user
+from app.db.database import get_db
+from app.db.models import Game, Prediction, User
+from app.db.models.game import GameStatus
+from app.api.v1.endpoints.games import GameResponse, game_to_response
 
 router = APIRouter()
 
@@ -18,6 +22,37 @@ router = APIRouter()
 class UpdateGameResultRequest(BaseModel):
     home_score: int
     away_score: int
+
+
+class AdminUserSummary(BaseModel):
+    id: int
+    username: str
+    email: str
+    created_at: datetime
+    total_points: int
+
+    class Config:
+        from_attributes = True
+
+
+class AdminUserListResponse(BaseModel):
+    users: List[AdminUserSummary]
+    total: int
+
+
+class AdminUserPredictionResponse(BaseModel):
+    id: int
+    predicted_home_score: int
+    predicted_away_score: int
+    points: int
+    is_calculated: bool
+    game: GameResponse
+
+
+class AdminUserPredictionsResponse(BaseModel):
+    user: AdminUserSummary
+    predictions: List[AdminUserPredictionResponse]
+    total_points: int
 
 
 def require_admin(current_user: User = Depends(get_current_user)) -> User:
@@ -28,6 +63,124 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
             detail="Admin access required"
         )
     return current_user
+
+
+@router.get("/users", response_model=AdminUserListResponse)
+async def list_users(
+    q: Optional[str] = Query(None, min_length=1, max_length=100),
+    sort: str = Query("username"),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(require_admin),
+):
+    """Search and list users for the admin panel."""
+    if sort not in {"username", "created_at"}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="sort must be 'username' or 'created_at'",
+        )
+
+    total_points_expr = func.coalesce(func.sum(Prediction.points), 0).label("total_points")
+    base_query = (
+        select(User, total_points_expr)
+        .outerjoin(Prediction, Prediction.user_id == User.id)
+        .group_by(User.id)
+    )
+
+    if q:
+        search = f"%{q.strip()}%"
+        base_query = base_query.where(
+            or_(User.username.ilike(search), User.email.ilike(search))
+        )
+
+    count_query = select(func.count()).select_from(base_query.subquery())
+    total_result = await db.execute(count_query)
+    total = total_result.scalar_one()
+
+    order_by = (
+        User.username.asc() if sort == "username" else User.created_at.desc()
+    )
+    query = base_query.order_by(order_by).limit(limit).offset(offset)
+    result = await db.execute(query)
+
+    users = [
+        AdminUserSummary(
+            id=user.id,
+            username=user.username,
+            email=user.email,
+            created_at=user.created_at,
+            total_points=int(total_points),
+        )
+        for user, total_points in result.all()
+    ]
+
+    return AdminUserListResponse(users=users, total=total)
+
+
+@router.get("/users/{user_id}/predictions", response_model=AdminUserPredictionsResponse)
+async def get_user_predictions(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(require_admin),
+):
+    """Return all predictions for a user with match context and scores."""
+    user_query = (
+        select(User, func.coalesce(func.sum(Prediction.points), 0).label("total_points"))
+        .outerjoin(Prediction, Prediction.user_id == User.id)
+        .where(User.id == user_id)
+        .group_by(User.id)
+    )
+    user_result = await db.execute(user_query)
+    user_row = user_result.first()
+
+    if not user_row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User with id {user_id} not found",
+        )
+
+    user, total_points = user_row
+
+    predictions_query = (
+        select(Prediction)
+        .where(Prediction.user_id == user_id)
+        .options(
+            selectinload(Prediction.game).selectinload(Game.home_team),
+            selectinload(Prediction.game).selectinload(Game.away_team),
+            selectinload(Prediction.game).selectinload(Game.round),
+            selectinload(Prediction.game).selectinload(Game.group),
+            selectinload(Prediction.game).selectinload(Game.stadium),
+        )
+        .join(Game, Prediction.game_id == Game.id)
+        .order_by(Game.match_date.asc(), Game.match_time.asc())
+    )
+    predictions_result = await db.execute(predictions_query)
+    predictions = predictions_result.scalars().all()
+
+    user_summary = AdminUserSummary(
+        id=user.id,
+        username=user.username,
+        email=user.email,
+        created_at=user.created_at,
+        total_points=int(total_points),
+    )
+
+    return AdminUserPredictionsResponse(
+        user=user_summary,
+        total_points=int(total_points),
+        predictions=[
+            AdminUserPredictionResponse(
+                id=prediction.id,
+                predicted_home_score=prediction.predicted_home_score,
+                predicted_away_score=prediction.predicted_away_score,
+                points=prediction.points,
+                is_calculated=prediction.is_calculated,
+                game=game_to_response(prediction.game),
+            )
+            for prediction in predictions
+        ],
+    )
 
 
 @router.put("/games/{game_id}/result", response_model=dict)
