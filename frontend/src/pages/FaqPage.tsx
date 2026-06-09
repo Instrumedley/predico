@@ -129,9 +129,6 @@ export const FaqPage: React.FC = () => {
                 </div>
               </li>
             </ul>
-            <p className="mt-4 text-sm text-neutral-DEFAULT/60">
-              Maximum from non-exact bonuses: 50 + 15 + 15 = <strong>80 points</strong> per match.
-            </p>
           </section>
 
           <section className="bg-white rounded-lg border border-neutral-DEFAULT/20 shadow-sm p-6 overflow-hidden">
