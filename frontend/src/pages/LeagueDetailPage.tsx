@@ -104,6 +104,16 @@ export const LeagueDetailPage: React.FC = () => {
   const parsedEmails = useMemo(() => parseEmailInput(inviteInput), [inviteInput])
   const createdLabel = league ? format(new Date(league.created_at), 'MMM d, yyyy') : ''
 
+  const handleJoinClick = () => {
+    if (!league) return
+    setJoinError('')
+    if (league.is_private) {
+      setJoinOpen(true)
+      return
+    }
+    joinMutation.mutate(undefined)
+  }
+
   const handleInviteSubmit = (event: React.FormEvent) => {
     event.preventDefault()
     setInviteError('')
@@ -142,9 +152,9 @@ export const LeagueDetailPage: React.FC = () => {
           <div className="mt-6 text-sm text-red-600">League not found.</div>
         ) : (
           <>
-            <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <div className="flex items-center gap-2">
+            <div className="mt-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
                   <h1 className="text-2xl font-bold text-neutral-DEFAULT">{league.name}</h1>
                   {league.is_private && (
                     <span className="inline-flex items-center rounded-full bg-neutral-light px-2 py-0.5 text-xs text-neutral-DEFAULT/70">
@@ -152,26 +162,38 @@ export const LeagueDetailPage: React.FC = () => {
                     </span>
                   )}
                 </div>
-                {league.description && (
-                  <p className="mt-2 text-sm text-neutral-DEFAULT/70">{league.description}</p>
-                )}
-                <p className="mt-2 text-xs text-neutral-DEFAULT/60">
-                  {league.member_count} member{league.member_count === 1 ? '' : 's'} · Created {createdLabel}
-                </p>
-              </div>
 
-              {!league.is_member && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setJoinError('')
-                    setJoinOpen(true)
-                  }}
-                  className="rounded-md bg-primary-medium px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark transition-colors"
-                >
-                  Join league
-                </button>
+                {!league.is_member && (
+                  <button
+                    type="button"
+                    onClick={handleJoinClick}
+                    disabled={joinMutation.isPending}
+                    className="inline-flex shrink-0 items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
+                  >
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+                      />
+                    </svg>
+                    {joinMutation.isPending ? 'Joining...' : 'Join'}
+                  </button>
+                )}
+              </div>
+              {league.description && (
+                <p className="mt-2 text-sm text-neutral-DEFAULT/70">{league.description}</p>
               )}
+              <p className="mt-2 text-xs text-neutral-DEFAULT/60">
+                {league.member_count} member{league.member_count === 1 ? '' : 's'} · Created {createdLabel}
+              </p>
             </div>
 
             {league.is_member && (
@@ -265,6 +287,10 @@ export const LeagueDetailPage: React.FC = () => {
                   </button>
                 </form>
               </div>
+            )}
+
+            {!league.is_member && joinError && (
+              <div className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{joinError}</div>
             )}
 
             {!league.is_member && (
