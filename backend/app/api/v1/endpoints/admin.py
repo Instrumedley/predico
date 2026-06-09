@@ -29,6 +29,7 @@ class AdminUserSummary(BaseModel):
     username: str
     email: str
     created_at: datetime
+    total_predictions: int
     total_points: int
 
     class Config:
@@ -82,8 +83,9 @@ async def list_users(
         )
 
     total_points_expr = func.coalesce(func.sum(Prediction.points), 0).label("total_points")
+    total_predictions_expr = func.count(Prediction.id).label("total_predictions")
     base_query = (
-        select(User, total_points_expr)
+        select(User, total_points_expr, total_predictions_expr)
         .outerjoin(Prediction, Prediction.user_id == User.id)
         .group_by(User.id)
     )
@@ -110,9 +112,10 @@ async def list_users(
             username=user.username,
             email=user.email,
             created_at=user.created_at,
+            total_predictions=int(total_predictions),
             total_points=int(total_points),
         )
-        for user, total_points in result.all()
+        for user, total_points, total_predictions in result.all()
     ]
 
     return AdminUserListResponse(users=users, total=total)
@@ -163,6 +166,7 @@ async def get_user_predictions(
         username=user.username,
         email=user.email,
         created_at=user.created_at,
+        total_predictions=len(predictions),
         total_points=int(total_points),
     )
 

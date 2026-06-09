@@ -115,7 +115,7 @@ export const AdminUsersPage: React.FC = () => {
                         >
                           <div className="font-medium text-neutral-DEFAULT">{user.username}</div>
                           <div className="text-xs text-neutral-DEFAULT/60 mt-1">
-                            {new Date(user.created_at).toLocaleDateString()} · {user.total_points} pts
+                            Total predictions: {user.total_predictions} - {user.total_points} pts
                           </div>
                         </button>
                       </li>

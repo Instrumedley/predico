@@ -80,6 +80,7 @@ export interface AdminUserSummary {
   username: string
   email: string
   created_at: string
+  total_predictions: number
   total_points: number
 }
 
