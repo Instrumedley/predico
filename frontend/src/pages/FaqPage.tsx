@@ -176,8 +176,8 @@ export const FaqPage: React.FC = () => {
                 entered. Until then, that game contributes 0 points to your total.
               </p>
               <p>
-                You can submit or update predictions on the <strong>Scorecard</strong> tab until each match
-                starts. After kickoff, that fixture is locked.
+                You can submit or update predictions on the <strong>Scorecard</strong> tab until{' '}
+                <strong>one hour before kickoff</strong>. After that deadline, the fixture is locked.
               </p>
             </div>
           </section>
