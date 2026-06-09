@@ -5,6 +5,7 @@ import { getLatestResults } from '@/services/matches'
 import { mockLatestResults } from '@/data/mockMatches'
 import { abbreviateCountryName } from '@/utils/countryNames'
 import { getCountryCodeForFlag } from '@/utils/countryFlags'
+import { formatMatchDateLocal } from '@/utils/timezone'
 
 interface LatestResultsProps {
   data?: LatestResultsData // Optional prop for when we integrate with backend
@@ -22,13 +23,7 @@ export const LatestResults: React.FC<LatestResultsProps> = ({ data: propData }) 
   // Use provided data, API data, or fall back to mock data
   const resultsData = propData || apiData || mockLatestResults
 
-  const formatDate = (isoString: string): string => {
-    const date = new Date(isoString)
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    })
-  }
+  const formatDate = (isoString: string): string => formatMatchDateLocal(isoString)
 
   if (isLoading) {
     return (

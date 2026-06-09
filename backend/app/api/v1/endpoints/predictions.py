@@ -11,9 +11,26 @@ from pydantic import BaseModel
 
 from app.db.database import get_db
 from app.db.models import Prediction, Game, User
+from app.db.models.game import GameStatus
 from app.core.security import get_current_user
+from app.utils.match_time import is_prediction_locked
 
 router = APIRouter()
+
+
+def _ensure_prediction_allowed(game: Game) -> None:
+    """Reject predictions after the lock deadline or for non-scheduled games."""
+    if game.status != GameStatus.SCHEDULED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Predictions are closed for this match.",
+        )
+
+    if is_prediction_locked(game):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Predictions lock one hour before kickoff.",
+        )
 
 
 class PredictionCreate(BaseModel):
@@ -100,6 +117,8 @@ async def create_or_update_prediction(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Game with id {prediction_data.game_id} not found"
         )
+
+    _ensure_prediction_allowed(game)
     
     # Check if prediction already exists
     existing_query = select(Prediction).where(
@@ -154,14 +173,17 @@ async def create_or_update_predictions_batch(
     game_ids = {p.game_id for p in batch_data.predictions}
     games_query = select(Game).where(Game.id.in_(game_ids))
     games_result = await db.execute(games_query)
-    existing_games = {game.id for game in games_result.scalars().all()}
+    games_by_id = {game.id: game for game in games_result.scalars().all()}
     
-    missing_games = game_ids - existing_games
+    missing_games = game_ids - games_by_id.keys()
     if missing_games:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Games not found: {missing_games}"
         )
+
+    for game in games_by_id.values():
+        _ensure_prediction_allowed(game)
     
     # Get all existing predictions for this user and these games
     existing_query = select(Prediction).where(

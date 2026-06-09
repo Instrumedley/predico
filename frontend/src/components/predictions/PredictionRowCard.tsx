@@ -3,6 +3,7 @@ import { Match } from '@/types/matches'
 import { Prediction } from '@/services/predictions'
 import { getCountryCodeForFlag } from '@/utils/countryFlags'
 import { abbreviateCountryName } from '@/utils/countryNames'
+import { formatMatchDateLocal, formatMatchKickoffLocal, isPredictionLocked } from '@/utils/timezone'
 
 interface PredictionRowCardProps {
   match: Match
@@ -52,21 +53,17 @@ export const PredictionRowCard: React.FC<PredictionRowCardProps> = ({
   }, [isAwayInputActive])
 
   const isFinalized = match.status === 'finished'
+  const isLocked = isPredictionLocked(match)
   const hasPrediction = prediction !== null && prediction !== undefined
 
   const formatDate = (dateString?: string): string => {
     if (!dateString) return ''
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-    })
+    return formatMatchDateLocal(dateString)
   }
 
   const getMatchStatus = (): string => {
     if (isFinalized) return 'FINALIZED'
-    // For now, we'll use UPCOMING since we don't have exact match times
-    // Later this can be changed to 'IN PROGRESS' when we have datetime data
+    if (isLocked) return 'LOCKED'
     return 'UPCOMING'
   }
 
@@ -98,7 +95,7 @@ export const PredictionRowCard: React.FC<PredictionRowCardProps> = ({
     }
   }
 
-  const canSubmit = homeScore !== '' && awayScore !== '' && !isSubmitting
+  const canSubmit = homeScore !== '' && awayScore !== '' && !isSubmitting && !isLocked && !isFinalized
 
   // Determine styling for finalized matches
   const getFinalizedCardStyle = () => {
@@ -134,6 +131,8 @@ export const PredictionRowCard: React.FC<PredictionRowCardProps> = ({
     return 'border-navajowhite/50'
   }
 
+  const kickoffDisplay = formatMatchKickoffLocal(match)
+
   return (
     <div
       className={`rounded-lg border shadow-sm p-3 ${getBorderClass()}`}
@@ -167,14 +166,17 @@ export const PredictionRowCard: React.FC<PredictionRowCardProps> = ({
               </span>
             </div>
           ) : (
-            // Show prediction inputs for non-finalized matches
+            // Show prediction inputs for open matches
             <div className="flex items-center space-x-2">
               {!isHomeInputActive ? (
                 <button
-                  onClick={() => setIsHomeInputActive(true)}
-                  onFocus={() => setIsHomeInputActive(true)}
-                  tabIndex={0}
-                  className="w-12 h-12 border-2 border-neutral-DEFAULT/30 rounded-lg flex items-center justify-center hover:border-primary-medium transition-colors bg-white focus:outline-none focus:ring-2 focus:ring-primary-medium"
+                  onClick={() => !isLocked && setIsHomeInputActive(true)}
+                  onFocus={() => !isLocked && setIsHomeInputActive(true)}
+                  tabIndex={isLocked ? -1 : 0}
+                  disabled={isLocked}
+                  className={`w-12 h-12 border-2 border-neutral-DEFAULT/30 rounded-lg flex items-center justify-center transition-colors bg-white focus:outline-none focus:ring-2 focus:ring-primary-medium ${
+                    isLocked ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary-medium'
+                  }`}
                 >
                   {homeScore ? (
                     <span className="text-neutral-DEFAULT font-bold text-lg">{homeScore}</span>
@@ -199,10 +201,13 @@ export const PredictionRowCard: React.FC<PredictionRowCardProps> = ({
               <span className="text-neutral-DEFAULT/50 font-bold">-</span>
               {!isAwayInputActive ? (
                 <button
-                  onClick={() => setIsAwayInputActive(true)}
-                  onFocus={() => setIsAwayInputActive(true)}
-                  tabIndex={0}
-                  className="w-12 h-12 border-2 border-neutral-DEFAULT/30 rounded-lg flex items-center justify-center hover:border-primary-medium transition-colors bg-white focus:outline-none focus:ring-2 focus:ring-primary-medium"
+                  onClick={() => !isLocked && setIsAwayInputActive(true)}
+                  onFocus={() => !isLocked && setIsAwayInputActive(true)}
+                  tabIndex={isLocked ? -1 : 0}
+                  disabled={isLocked}
+                  className={`w-12 h-12 border-2 border-neutral-DEFAULT/30 rounded-lg flex items-center justify-center transition-colors bg-white focus:outline-none focus:ring-2 focus:ring-primary-medium ${
+                    isLocked ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary-medium'
+                  }`}
                 >
                   {awayScore ? (
                     <span className="text-neutral-DEFAULT font-bold text-lg">{awayScore}</span>
@@ -303,7 +308,8 @@ export const PredictionRowCard: React.FC<PredictionRowCardProps> = ({
           </span>
           <span className={getTextColorClass('text-neutral-DEFAULT/60')}>|</span>
           <span className={`text-sm ${getTextColorClass('text-neutral-DEFAULT/70')}`}>
-            {formatDate(match.matchDate || match.scheduledAt)}
+            {formatDate(match.scheduledAt)}
+            {kickoffDisplay?.time ? ` · ${kickoffDisplay.time}` : ''}
           </span>
         </div>
 

@@ -5,6 +5,7 @@ import { getNextMatch } from '@/services/matches'
 import { mockNextMatch } from '@/data/mockMatches'
 import { abbreviateCountryName } from '@/utils/countryNames'
 import { getCountryCodeForFlag } from '@/utils/countryFlags'
+import { formatMatchKickoffLocal } from '@/utils/timezone'
 
 interface NextMatchProps {
   data?: NextMatchData // Optional prop for when we integrate with backend
@@ -21,21 +22,6 @@ export const NextMatch: React.FC<NextMatchProps> = ({ data: propData }) => {
 
   // Use provided data, API data, or fall back to mock data
   const matchData = propData || apiData || mockNextMatch
-
-  const formatDateTime = (isoString: string): { date: string; time: string } => {
-    const date = new Date(isoString)
-    const dateStr = date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-    })
-    const timeStr = date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    })
-    return { date: dateStr, time: timeStr }
-  }
 
   if (isLoading) {
     return (
@@ -63,7 +49,9 @@ export const NextMatch: React.FC<NextMatchProps> = ({ data: propData }) => {
 
       <div className={`space-y-4 p-4 rounded-lg ${matchData.matches.length === 2 ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : ''}`} style={{ backgroundColor: '#F7FFF6' }}>
         {matchData.matches.map((match) => {
-          const { date, time } = formatDateTime(match.scheduledAt)
+          const kickoff = formatMatchKickoffLocal(match)
+          const date = kickoff?.date ?? ''
+          const time = kickoff?.time ?? ''
 
           return (
             <div key={match.id} className="border border-neutral-DEFAULT/20 rounded-lg p-4">

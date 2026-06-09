@@ -3,13 +3,13 @@ Games endpoints for fetching match data.
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select, and_
 from sqlalchemy.orm import selectinload
-from datetime import datetime, date, time, timedelta
+from datetime import datetime
 from typing import List, Optional
-import re
 
 from app.db.database import get_db
+from app.utils.match_time import get_game_kickoff_utc
 from app.db.models import Game, Team, Round, Group, Stadium
 from app.db.models.game import GameStatus
 from pydantic import BaseModel
@@ -78,11 +78,12 @@ class GameResponse(BaseModel):
 
 def game_to_response(game: Game) -> GameResponse:
     """Convert Game model to GameResponse, handling time serialization."""
+    kickoff_utc = get_game_kickoff_utc(game) or game.scheduled_at
     return GameResponse(
         id=game.id,
         home_team=TeamResponse.model_validate(game.home_team),
         away_team=TeamResponse.model_validate(game.away_team),
-        scheduled_at=game.scheduled_at,
+        scheduled_at=kickoff_utc,
         match_date=game.match_date,
         match_time=game.match_time.strftime('%H:%M:%S') if game.match_time else None,
         timezone=game.timezone,
@@ -148,42 +149,6 @@ async def get_games(
     return [game_to_response(game) for game in games]
 
 
-def parse_timezone_offset(timezone_str: str) -> int:
-    """
-    Parse timezone string like "UTC-5" or "UTC+3" to offset in hours.
-    Returns offset in hours (e.g., -5 for UTC-5, +3 for UTC+3).
-    """
-    if not timezone_str:
-        return 0
-    
-    # Remove "UTC" prefix and parse the offset
-    match = re.match(r'UTC([+-]?\d+)', timezone_str.strip(), re.IGNORECASE)
-    if match:
-        return int(match.group(1))
-    return 0
-
-
-def get_match_datetime_utc(match_date: date, match_time: Optional[time], timezone_str: Optional[str]) -> Optional[datetime]:
-    """
-    Convert match date, time, and timezone to UTC datetime.
-    Returns None if match_date, match_time, or timezone is missing.
-    """
-    if not match_date or not match_time or not timezone_str:
-        return None
-    
-    # Parse timezone offset
-    tz_offset_hours = parse_timezone_offset(timezone_str)
-    
-    # Create datetime in local timezone
-    local_datetime = datetime.combine(match_date, match_time)
-    
-    # Convert to UTC by subtracting the offset
-    # If timezone is UTC-5, we need to add 5 hours to get UTC
-    utc_datetime = local_datetime.replace(tzinfo=None) - timedelta(hours=tz_offset_hours)
-    
-    return utc_datetime
-
-
 @router.get("/next", response_model=GameResponse)
 async def get_next_game(db: AsyncSession = Depends(get_db)):
     """
@@ -217,17 +182,10 @@ async def get_next_game(db: AsyncSession = Depends(get_db)):
     next_datetime = None
     
     for game in all_games:
-        # Try to use match_date, match_time, and timezone first
-        if game.match_date and game.match_time and game.timezone:
-            match_utc = get_match_datetime_utc(game.match_date, game.match_time, game.timezone)
-            if match_utc and match_utc > now:
-                if next_datetime is None or match_utc < next_datetime:
-                    next_datetime = match_utc
-                    next_game = game
-        # Fallback to scheduled_at
-        elif game.scheduled_at and game.scheduled_at > now:
-            if next_datetime is None or game.scheduled_at < next_datetime:
-                next_datetime = game.scheduled_at
+        match_utc = get_game_kickoff_utc(game)
+        if match_utc and match_utc > now:
+            if next_datetime is None or match_utc < next_datetime:
+                next_datetime = match_utc
                 next_game = game
     
     if not next_game:

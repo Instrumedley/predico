@@ -4,6 +4,7 @@
 import apiClient from './api'
 import { Match, NextMatchData, LatestResultsData } from '@/types/matches'
 import { AxiosError } from 'axios'
+import { parseUtcDateTime } from '@/utils/timezone'
 
 const API_PREFIX = '/api/v1'
 
@@ -71,7 +72,7 @@ function transformMatchResponse(match: ApiMatchResponse): Match {
       countryCode: match.away_team.country_code,
       flagEmoji: match.away_team.flag_emoji ?? undefined,
     },
-    scheduledAt: match.scheduled_at,
+    scheduledAt: parseUtcDateTime(match.scheduled_at).toISOString(),
     matchDate: match.match_date ?? undefined,
     matchTime: match.match_time ?? undefined,
     timezone: match.timezone ?? undefined,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { getNextMatch } from '@/services/matches'
-import { calculateDeadline } from '@/utils/timezone'
+import { calculateDeadline, getMatchKickoffUTC } from '@/utils/timezone'
 import { abbreviateCountryName } from '@/utils/countryNames'
 import { getCountryCodeForFlag } from '@/utils/countryFlags'
 
@@ -66,10 +66,13 @@ export const DeadlineCard: React.FC<DeadlineCardProps> = ({
               roundName: match.round?.name || 'Next Match',
             })
           } else {
-            // Fallback to scheduled_at if match_time/timezone not available
-            const fallbackDate = new Date(match.scheduledAt)
-            // Subtract 1 hour for deadline
-            const fallbackDeadline = new Date(fallbackDate.getTime() - 60 * 60 * 1000)
+            const kickoff = getMatchKickoffUTC(match)
+            if (!kickoff) {
+              setError('No upcoming matches found')
+              setTargetDate(null)
+              return
+            }
+            const fallbackDeadline = new Date(kickoff.getTime() - 60 * 60 * 1000)
             setTargetDate(fallbackDeadline)
             setMatchInfo({
               homeTeam: match.homeTeam.name,
