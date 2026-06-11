@@ -20,6 +20,7 @@ class League(Base):
     description = Column(String, nullable=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     is_private = Column(Boolean, default=True, nullable=False, index=True)
+    is_join_locked = Column(Boolean, default=False, nullable=False, index=True)
     invite_code = Column(String, unique=True, nullable=True, index=True)  # Unique code for joining
     
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

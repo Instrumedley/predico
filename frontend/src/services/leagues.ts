@@ -47,6 +47,7 @@ export interface LeagueDetail {
   name: string
   description?: string | null
   is_private: boolean
+  is_join_locked: boolean
   created_at: string
   created_by: number
   member_count: number
@@ -149,6 +150,23 @@ export async function inviteToLeague(leagueId: string, emails: string[]): Promis
 
 export async function acceptLeagueInvite(token: string): Promise<LeagueDetail> {
   const response = await apiClient.post<LeagueDetail>('/api/v1/leagues/accept-invite', { token })
+  return response.data
+}
+
+export async function removeLeagueMember(leagueId: string, userId: number): Promise<LeagueDetail> {
+  const response = await apiClient.delete<LeagueDetail>(
+    `/api/v1/leagues/${leagueId}/members/${userId}`
+  )
+  return response.data
+}
+
+export async function lockLeagueJoins(leagueId: string): Promise<LeagueDetail> {
+  const response = await apiClient.post<LeagueDetail>(`/api/v1/leagues/${leagueId}/lock`)
+  return response.data
+}
+
+export async function unlockLeagueJoins(leagueId: string): Promise<LeagueDetail> {
+  const response = await apiClient.post<LeagueDetail>(`/api/v1/leagues/${leagueId}/unlock`)
   return response.data
 }
 

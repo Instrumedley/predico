@@ -65,6 +65,7 @@ class LeagueDetail(BaseModel):
     name: str
     description: Optional[str] = None
     is_private: bool
+    is_join_locked: bool = False
     created_at: datetime
     created_by: int
     member_count: int

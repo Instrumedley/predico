@@ -11,7 +11,10 @@ import {
   getLeagueProgress,
   inviteToLeague,
   joinLeague,
+  lockLeagueJoins,
   parseEmailInput,
+  removeLeagueMember,
+  unlockLeagueJoins,
 } from '@/services/leagues'
 import { getFeatureFlags } from '@/services/config'
 import { useAuth } from '@/contexts/AuthContext'
@@ -123,6 +126,41 @@ export const LeagueDetailPage: React.FC = () => {
     },
   })
 
+  const removeMemberMutation = useMutation({
+    mutationFn: (userId: number) => removeLeagueMember(leaguePublicId, userId),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['leagueDetail', leaguePublicId], data)
+      queryClient.invalidateQueries({ queryKey: ['myLeagues'] })
+      queryClient.invalidateQueries({ queryKey: ['allLeagues'] })
+      showFeedback('Member removed from the league.', 'success')
+    },
+    onError: (err: any) => {
+      showFeedback(err.response?.data?.detail || 'Failed to remove member.', 'error')
+    },
+  })
+
+  const lockLeagueMutation = useMutation({
+    mutationFn: () => lockLeagueJoins(leaguePublicId),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['leagueDetail', leaguePublicId], data)
+      showFeedback('League locked. New members can no longer join.', 'success')
+    },
+    onError: (err: any) => {
+      showFeedback(err.response?.data?.detail || 'Failed to lock league.', 'error')
+    },
+  })
+
+  const unlockLeagueMutation = useMutation({
+    mutationFn: () => unlockLeagueJoins(leaguePublicId),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['leagueDetail', leaguePublicId], data)
+      showFeedback('League unlocked. New members can join again.', 'success')
+    },
+    onError: (err: any) => {
+      showFeedback(err.response?.data?.detail || 'Failed to unlock league.', 'error')
+    },
+  })
+
   useEffect(() => {
     if (!inviteToken || !league || league.is_member) {
       return
@@ -168,6 +206,20 @@ export const LeagueDetailPage: React.FC = () => {
     setSelectedMemberName('')
   }
 
+  const handleRemoveMember = (userId: number, username: string) => {
+    if (
+      !window.confirm(
+        `Remove ${username} from this league? They will lose access to the league ranking.`
+      )
+    ) {
+      return
+    }
+    removeMemberMutation.mutate(userId)
+  }
+
+  const leagueSettingsPending =
+    lockLeagueMutation.isPending || unlockLeagueMutation.isPending || removeMemberMutation.isPending
+
   if (!leaguePublicId) {
     return (
       <div className="min-h-screen bg-neutral-light">
@@ -205,9 +257,14 @@ export const LeagueDetailPage: React.FC = () => {
                       Private
                     </span>
                   )}
+                  {league.is_join_locked && (
+                    <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-800">
+                      Joining closed
+                    </span>
+                  )}
                 </div>
 
-                {!league.is_member && (
+                {!league.is_member && !league.is_join_locked && (
                   <button
                     type="button"
                     onClick={handleJoinClick}
@@ -246,6 +303,7 @@ export const LeagueDetailPage: React.FC = () => {
                   <h2 className="text-sm font-semibold text-neutral-DEFAULT">League ranking</h2>
                   <p className="mt-1 text-xs text-neutral-DEFAULT/60">
                     Click a player to view their predictions.
+                    {league.is_creator && ' As the creator, you can remove members from this list.'}
                   </p>
                 </div>
                 {league.rankings.length === 0 ? (
@@ -265,6 +323,11 @@ export const LeagueDetailPage: React.FC = () => {
                         <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-neutral-DEFAULT/70">
                           Points
                         </th>
+                        {league.is_creator && (
+                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-neutral-DEFAULT/70">
+                            Actions
+                          </th>
+                        )}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-DEFAULT/10">
@@ -291,6 +354,22 @@ export const LeagueDetailPage: React.FC = () => {
                             <td className="px-4 py-3 text-sm text-neutral-DEFAULT text-right font-medium">
                               {entry.total_points}
                             </td>
+                            {league.is_creator && (
+                              <td className="px-4 py-3 text-right">
+                                {entry.user_id === league.created_by ? (
+                                  <span className="text-xs text-neutral-DEFAULT/40">Creator</span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveMember(entry.user_id, entry.username)}
+                                    disabled={leagueSettingsPending}
+                                    className="text-xs font-medium text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                  >
+                                    Remove
+                                  </button>
+                                )}
+                              </td>
+                            )}
                           </tr>
                         )
                       })}
@@ -316,11 +395,53 @@ export const LeagueDetailPage: React.FC = () => {
 
             {league.is_creator && (
               <div className="mt-8 bg-white rounded-lg border border-neutral-DEFAULT/20 shadow-sm p-6">
+                <h2 className="text-lg font-semibold text-neutral-DEFAULT">League settings</h2>
+                <p className="mt-2 text-sm text-neutral-DEFAULT/70">
+                  Lock the league when your group is complete. While locked, nobody can join via
+                  link, password, or invite.
+                </p>
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  {league.is_join_locked ? (
+                    <button
+                      type="button"
+                      onClick={() => unlockLeagueMutation.mutate()}
+                      disabled={leagueSettingsPending}
+                      className="rounded-md bg-primary-medium px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-50"
+                    >
+                      {unlockLeagueMutation.isPending ? 'Unlocking...' : 'Unlock league'}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => lockLeagueMutation.mutate()}
+                      disabled={leagueSettingsPending}
+                      className="rounded-md border border-neutral-DEFAULT/30 px-4 py-2 text-sm font-medium text-neutral-DEFAULT hover:bg-neutral-light disabled:opacity-50"
+                    >
+                      {lockLeagueMutation.isPending ? 'Locking...' : 'Lock league'}
+                    </button>
+                  )}
+                  <span className="text-sm text-neutral-DEFAULT/60">
+                    {league.is_join_locked
+                      ? 'New members cannot join until you unlock.'
+                      : 'Members can still join this league.'}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {league.is_creator && (
+              <div className="mt-8 bg-white rounded-lg border border-neutral-DEFAULT/20 shadow-sm p-6">
                 <h2 className="text-lg font-semibold text-neutral-DEFAULT">Invite friends</h2>
                 <p className="mt-2 text-sm text-neutral-DEFAULT/70">
                   Add one or more email addresses separated by commas or new lines. Each person will
                   receive a link to this league.
                 </p>
+
+                {league.is_join_locked && (
+                  <div className="mt-4 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
+                    Invitations are disabled while the league is locked.
+                  </div>
+                )}
 
                 <form onSubmit={handleInviteSubmit} className="mt-4 space-y-4">
                   <div>
@@ -332,7 +453,8 @@ export const LeagueDetailPage: React.FC = () => {
                       rows={4}
                       value={inviteInput}
                       onChange={(event) => setInviteInput(event.target.value)}
-                      className="block w-full rounded-md border border-neutral-DEFAULT/30 px-3 py-2 shadow-sm focus:border-primary-medium focus:outline-none focus:ring-1 focus:ring-primary-medium"
+                      disabled={league.is_join_locked}
+                      className="block w-full rounded-md border border-neutral-DEFAULT/30 px-3 py-2 shadow-sm focus:border-primary-medium focus:outline-none focus:ring-1 focus:ring-primary-medium disabled:cursor-not-allowed disabled:bg-neutral-light disabled:opacity-60"
                     />
                     {parsedEmails.length > 0 && (
                       <p className="mt-2 text-xs text-neutral-DEFAULT/60">
@@ -347,7 +469,9 @@ export const LeagueDetailPage: React.FC = () => {
 
                   <button
                     type="submit"
-                    disabled={inviteMutation.isPending || parsedEmails.length === 0}
+                    disabled={
+                      inviteMutation.isPending || parsedEmails.length === 0 || league.is_join_locked
+                    }
                     className="rounded-md bg-primary-medium px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-50"
                   >
                     {inviteMutation.isPending ? 'Sending invites...' : 'Send invites'}
@@ -360,7 +484,14 @@ export const LeagueDetailPage: React.FC = () => {
               <div className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{joinError}</div>
             )}
 
-            {!league.is_member && (
+            {!league.is_member && league.is_join_locked && (
+              <div className="mt-8 rounded-lg border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">
+                This league is not accepting new members. Contact the league creator if you think
+                this is a mistake.
+              </div>
+            )}
+
+            {!league.is_member && !league.is_join_locked && (
               <div className="mt-8 rounded-lg border border-dashed border-neutral-DEFAULT/20 bg-white p-6 text-sm text-neutral-DEFAULT/70">
                 Join this league to see the member ranking and compete with friends.
               </div>

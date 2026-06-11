@@ -7,7 +7,7 @@ from typing import List, Optional, Tuple
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import LeagueInvitation, LeagueMember, Prediction, User
+from app.db.models import League, LeagueInvitation, LeagueMember, Prediction, User
 from app.services.token_service import TokenService
 
 INVITE_EXPIRY_DAYS = 30
@@ -120,6 +120,13 @@ async def accept_league_invitation(
         raise ValueError("Invitation has expired")
     if invitation.invitee_email.lower() != user.email.lower():
         raise ValueError("This invitation was sent to a different email address")
+
+    league_result = await db.execute(select(League).where(League.id == invitation.league_id))
+    league = league_result.scalar_one_or_none()
+    if not league:
+        raise ValueError("League not found")
+    if league.is_join_locked:
+        raise ValueError("This league is not accepting new members")
 
     existing = await db.execute(
         select(LeagueMember).where(

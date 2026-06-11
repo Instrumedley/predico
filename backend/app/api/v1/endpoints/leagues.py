@@ -137,6 +137,22 @@ async def _require_league_member(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
 
 
+def _require_league_creator(league: League, user: User) -> None:
+    if league.created_by != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the league creator can perform this action",
+        )
+
+
+def _ensure_league_accepts_joins(league: League) -> None:
+    if league.is_join_locked:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This league is not accepting new members",
+        )
+
+
 def _prediction_to_league_member_prediction(prediction: Prediction) -> LeagueMemberPrediction:
     game_response = game_to_response(prediction.game)
     home_team = game_response.home_team
@@ -197,6 +213,7 @@ async def _build_league_detail(
         name=league.name,
         description=league.description,
         is_private=league.is_private,
+        is_join_locked=league.is_join_locked,
         created_at=league.created_at,
         created_by=league.created_by,
         member_count=member_count.get(league.id, 0),
@@ -275,6 +292,8 @@ async def accept_league_invite(
     league = result.scalar_one_or_none()
     if not league:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="League not found")
+
+    _ensure_league_accepts_joins(league)
 
     if invitation.status == "accepted":
         membership = await db.execute(
@@ -441,6 +460,7 @@ async def join_league(
 ):
     """Join a public league, or a private league with the correct password."""
     league = await _get_league_or_404(db, league_id)
+    _ensure_league_accepts_joins(league)
 
     existing = await db.execute(
         select(LeagueMember).where(
@@ -472,8 +492,8 @@ async def invite_to_league(
     """Send league invitation emails. Only the league creator can invite."""
     league = await _get_league_or_404(db, league_id)
 
-    if league.created_by != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the league creator can send invites")
+    _require_league_creator(league, current_user)
+    _ensure_league_accepts_joins(league)
 
     emails = _normalize_emails(payload.emails)
     sent: List[str] = []
@@ -522,3 +542,70 @@ async def invite_to_league(
         )
 
     return LeagueInviteResponse(sent=sent, failed=failed)
+
+
+@router.delete("/{league_id}/members/{user_id}", response_model=LeagueDetail)
+async def remove_league_member(
+    league_id: UUID,
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Remove a member from the league. Only the league creator can remove members."""
+    league = await _get_league_or_404(db, league_id)
+    _require_league_creator(league, current_user)
+
+    if user_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot remove yourself from the league",
+        )
+
+    member_result = await db.execute(
+        select(LeagueMember).where(
+            LeagueMember.league_id == league.id,
+            LeagueMember.user_id == user_id,
+        )
+    )
+    member = member_result.scalar_one_or_none()
+    if not member:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User is not a member of this league")
+
+    await db.delete(member)
+    await db.commit()
+
+    return await _build_league_detail(db, league, current_user, is_member=True)
+
+
+@router.post("/{league_id}/lock", response_model=LeagueDetail)
+async def lock_league_joins(
+    league_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Prevent new members from joining the league."""
+    league = await _get_league_or_404(db, league_id)
+    _require_league_creator(league, current_user)
+
+    league.is_join_locked = True
+    await db.commit()
+    await db.refresh(league)
+
+    return await _build_league_detail(db, league, current_user, is_member=True)
+
+
+@router.post("/{league_id}/unlock", response_model=LeagueDetail)
+async def unlock_league_joins(
+    league_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Allow new members to join the league again."""
+    league = await _get_league_or_404(db, league_id)
+    _require_league_creator(league, current_user)
+
+    league.is_join_locked = False
+    await db.commit()
+    await db.refresh(league)
+
+    return await _build_league_detail(db, league, current_user, is_member=True)
