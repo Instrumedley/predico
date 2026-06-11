@@ -7,7 +7,7 @@ import { getUserPredictions, Prediction } from '@/services/predictions'
 import { mockNextMatch } from '@/data/mockMatches'
 import { abbreviateCountryName } from '@/utils/countryNames'
 import { getCountryCodeForFlag } from '@/utils/countryFlags'
-import { formatMatchKickoffLocal } from '@/utils/timezone'
+import { formatMatchKickoffLocal, isPredictionLocked } from '@/utils/timezone'
 
 interface NextMatchProps {
   data?: NextMatchData // Optional prop for when we integrate with backend
@@ -43,6 +43,15 @@ const NextMatchPredictionStatus: React.FC<NextMatchPredictionStatusProps> = ({
           style={{ fontSize: '0.875rem' }}
           aria-hidden="true"
         />
+      </div>
+    )
+  }
+
+  if (isPredictionLocked(match)) {
+    return (
+      <div className={`flex items-center gap-1.5 text-xs text-neutral-DEFAULT/70 ${alignmentClass}`}>
+        <span aria-hidden="true">😢</span>
+        <span>You missed entering your prediction</span>
       </div>
     )
   }

@@ -9,7 +9,7 @@ from datetime import datetime, date
 from typing import List, Optional
 
 from app.db.database import get_db
-from app.utils.match_time import get_game_kickoff_utc
+from app.utils.match_time import get_game_kickoff_utc, get_prediction_deadline_utc
 from app.db.models import Game, Team, Round, Group, Stadium
 from app.db.models.game import GameStatus
 from pydantic import BaseModel
@@ -194,6 +194,44 @@ async def get_next_game(db: AsyncSession = Depends(get_db)):
             detail="No upcoming games found"
         )
     
+    return game_to_response(next_game)
+
+
+@router.get("/next-deadline", response_model=GameResponse)
+async def get_next_deadline_game(db: AsyncSession = Depends(get_db)):
+    """
+    Get the scheduled game whose prediction deadline (1 hour before kickoff) is
+    the soonest among deadlines still in the future.
+    """
+    now = datetime.utcnow()
+
+    query = select(Game).options(
+        selectinload(Game.home_team),
+        selectinload(Game.away_team),
+        selectinload(Game.stadium),
+        selectinload(Game.round),
+        selectinload(Game.group),
+    ).where(Game.status == GameStatus.SCHEDULED)
+
+    result = await db.execute(query)
+    all_games = result.scalars().all()
+
+    next_game = None
+    next_deadline = None
+
+    for game in all_games:
+        deadline = get_prediction_deadline_utc(game)
+        if deadline and deadline > now:
+            if next_deadline is None or deadline < next_deadline:
+                next_deadline = deadline
+                next_game = game
+
+    if not next_game:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No upcoming prediction deadlines found",
+        )
+
     return game_to_response(next_game)
 
 

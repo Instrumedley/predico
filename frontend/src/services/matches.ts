@@ -124,6 +124,22 @@ export async function getNextMatch(): Promise<NextMatchData> {
 }
 
 /**
+ * Get the scheduled match whose prediction deadline is the soonest still in the future.
+ */
+export async function getNextDeadlineMatch(): Promise<Match | null> {
+  try {
+    const response = await apiClient.get<ApiMatchResponse>(`${API_PREFIX}/games/next-deadline`)
+    return transformMatchResponse(response.data)
+  } catch (error) {
+    const axiosError = error as AxiosError
+    if (axiosError.response?.status === 404) {
+      return null
+    }
+    throw error
+  }
+}
+
+/**
  * Get latest finished matches
  */
 export async function getLatestResults(): Promise<LatestResultsData> {
