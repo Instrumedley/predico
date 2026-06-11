@@ -1,9 +1,9 @@
-import React, { useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { NavBar, MiniMenu, type MenuOption } from '@/components/layout'
 import { PredictionRowCard } from '@/components/predictions'
-import { getGames } from '@/services/matches'
+import { getGames, getNextMatch } from '@/services/matches'
 import { getUserPredictions, createOrUpdatePrediction, createOrUpdatePredictionsBatch } from '@/services/predictions'
 import { Match } from '@/types/matches'
 import { Prediction } from '@/services/predictions'
@@ -21,6 +21,9 @@ interface RoundSection {
 
 export const ScorecardPage: React.FC = () => {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const highlightedGameId = searchParams.get('game')
+  const hasScrolledToGame = useRef(false)
   const [collapsedRounds, setCollapsedRounds] = useState<Set<number>>(new Set())
   const [pendingPredictions, setPendingPredictions] = useState<Map<number, { homeScore: number; awayScore: number }>>(
     new Map()
@@ -41,6 +44,12 @@ export const ScorecardPage: React.FC = () => {
     queryKey: ['userPredictions'],
     queryFn: getUserPredictions,
     staleTime: 30 * 1000, // 30 seconds
+  })
+
+  const { data: nextMatchData, isLoading: nextMatchLoading } = useQuery({
+    queryKey: ['nextMatch'],
+    queryFn: getNextMatch,
+    staleTime: 1 * 60 * 1000,
   })
 
   // Create a map of gameId -> prediction for quick lookup
@@ -161,6 +170,47 @@ export const ScorecardPage: React.FC = () => {
 
   const isLoading = gamesLoading || predictionsLoading
 
+  useEffect(() => {
+    if (isLoading || roundsData.length === 0 || hasScrolledToGame.current) {
+      return
+    }
+
+    if (!highlightedGameId && nextMatchLoading) {
+      return
+    }
+
+    let gameId: number | null = null
+    if (highlightedGameId) {
+      const parsed = Number.parseInt(highlightedGameId, 10)
+      gameId = Number.isNaN(parsed) ? null : parsed
+    } else {
+      gameId = nextMatchData?.matches[0]?.id ?? null
+    }
+
+    if (!gameId) {
+      return
+    }
+
+    const round = roundsData.find((section) => section.games.some((game) => game.id === gameId))
+    if (!round) {
+      return
+    }
+
+    setCollapsedRounds((prev) => {
+      const next = new Set(prev)
+      next.delete(round.roundId)
+      return next
+    })
+
+    window.setTimeout(() => {
+      document.getElementById(`scorecard-game-${gameId}`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      })
+      hasScrolledToGame.current = true
+    }, 100)
+  }, [highlightedGameId, isLoading, nextMatchLoading, nextMatchData, roundsData])
+
   const handleMenuOptionChange = (option: MenuOption) => {
     if (option === 'dashboard') {
       navigate('/dashboard')
@@ -220,14 +270,23 @@ export const ScorecardPage: React.FC = () => {
                   {!isCollapsed && (
                     <div className="mt-4 space-y-4">
                       {round.games.map((game) => (
-                        <PredictionRowCard
+                        <div
                           key={game.id}
-                          match={game}
-                          prediction={game.prediction}
-                          onPredictionSubmit={handlePredictionSubmit}
-                          onPredictionChange={handlePredictionChange}
-                          isSubmitting={submitPredictionMutation.isPending}
-                        />
+                          id={`scorecard-game-${game.id}`}
+                          className={
+                            highlightedGameId === String(game.id)
+                              ? 'rounded-lg ring-2 ring-primary-medium/40 ring-offset-2'
+                              : undefined
+                          }
+                        >
+                          <PredictionRowCard
+                            match={game}
+                            prediction={game.prediction}
+                            onPredictionSubmit={handlePredictionSubmit}
+                            onPredictionChange={handlePredictionChange}
+                            isSubmitting={submitPredictionMutation.isPending}
+                          />
+                        </div>
                       ))}
                     </div>
                   )}

@@ -110,7 +110,7 @@ export const PredictionRowCard: React.FC<PredictionRowCardProps> = ({
       return { backgroundColor: 'lightgreen', color: 'darkgreen' }
     }
     
-    return { backgroundColor: 'tomato', color: 'navajowhite' }
+    return { backgroundColor: '#FF9869', color: 'navajowhite' }
   }
 
   const cardStyle = getFinalizedCardStyle()
