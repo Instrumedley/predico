@@ -311,9 +311,9 @@ export const LeagueDetailPage: React.FC = () => {
                     No points scored yet. Rankings update when match results are entered.
                   </div>
                 ) : (
-                  <table className="min-w-full divide-y divide-neutral-DEFAULT/10">
+                  <table className="min-w-full">
                     <thead>
-                      <tr>
+                      <tr className="border-b border-neutral-DEFAULT/10">
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-DEFAULT/70">
                           Rank
                         </th>
@@ -323,6 +323,9 @@ export const LeagueDetailPage: React.FC = () => {
                         <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-neutral-DEFAULT/70">
                           Points
                         </th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-neutral-DEFAULT/70">
+                          Perfect Predictions
+                        </th>
                         {league.is_creator && (
                           <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-neutral-DEFAULT/70">
                             Actions
@@ -330,29 +333,47 @@ export const LeagueDetailPage: React.FC = () => {
                         )}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-neutral-DEFAULT/10">
-                      {league.rankings.map((entry) => {
+                    <tbody>
+                      {league.rankings.map((entry, index) => {
                         const isCurrentUser = user?.id === entry.user_id
+                        const previousRank = index > 0 ? league.rankings[index - 1].rank : null
+                        const showRankSeparator = previousRank !== null && entry.rank !== previousRank
+
                         return (
                           <tr
                             key={entry.user_id}
-                            className={isCurrentUser ? 'bg-primary-medium/10' : undefined}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => handleMemberClick(entry.user_id, entry.username)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault()
+                                handleMemberClick(entry.user_id, entry.username)
+                              }
+                            }}
+                            className={`cursor-pointer transition-colors hover:bg-neutral-light/80 focus:outline-none focus:bg-neutral-light/80 ${
+                              showRankSeparator ? 'border-t border-neutral-DEFAULT/20' : ''
+                            } ${isCurrentUser ? 'bg-primary-medium/10 hover:bg-primary-medium/15' : ''}`}
                           >
                             <td className="px-4 py-3 text-sm text-neutral-DEFAULT">{entry.rank}</td>
                             <td className="px-4 py-3 text-sm text-neutral-DEFAULT">
-                              <button
-                                type="button"
-                                onClick={() => handleMemberClick(entry.user_id, entry.username)}
-                                className="inline-flex items-center gap-1 font-medium text-primary-medium hover:text-primary-dark hover:underline transition-colors"
-                              >
+                              <span className="inline-flex items-center gap-1.5 font-medium">
+                                {entry.rank === 1 && (
+                                  <span aria-hidden="true" title="League leader">
+                                    🏆
+                                  </span>
+                                )}
                                 {entry.username}
                                 {isCurrentUser && (
-                                  <span className="text-xs text-primary-medium no-underline">(You)</span>
+                                  <span className="text-xs font-normal text-neutral-DEFAULT/70">(You)</span>
                                 )}
-                              </button>
+                              </span>
                             </td>
                             <td className="px-4 py-3 text-sm text-neutral-DEFAULT text-right font-medium">
                               {entry.total_points}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-neutral-DEFAULT text-right font-medium">
+                              {entry.perfect_predictions}
                             </td>
                             {league.is_creator && (
                               <td className="px-4 py-3 text-right">
@@ -361,7 +382,10 @@ export const LeagueDetailPage: React.FC = () => {
                                 ) : (
                                   <button
                                     type="button"
-                                    onClick={() => handleRemoveMember(entry.user_id, entry.username)}
+                                    onClick={(event) => {
+                                      event.stopPropagation()
+                                      handleRemoveMember(entry.user_id, entry.username)
+                                    }}
                                     disabled={leagueSettingsPending}
                                     className="text-xs font-medium text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
                                   >

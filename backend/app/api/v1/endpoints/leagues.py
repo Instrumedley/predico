@@ -183,10 +183,25 @@ def _prediction_to_league_member_prediction(prediction: Prediction) -> LeagueMem
 
 async def _build_rankings(db: AsyncSession, league_id: int) -> List[LeagueMemberRanking]:
     rows = await get_league_rankings(db, league_id)
-    return [
-        LeagueMemberRanking(rank=index, user_id=user_id, username=username, total_points=points)
-        for index, (user_id, username, points) in enumerate(rows, start=1)
-    ]
+    rankings: List[LeagueMemberRanking] = []
+    previous_points: Optional[int] = None
+    current_rank = 0
+
+    for index, (user_id, username, points, perfect_predictions) in enumerate(rows, start=1):
+        if previous_points is None or points != previous_points:
+            current_rank = index
+        rankings.append(
+            LeagueMemberRanking(
+                rank=current_rank,
+                user_id=user_id,
+                username=username,
+                total_points=points,
+                perfect_predictions=perfect_predictions,
+            )
+        )
+        previous_points = points
+
+    return rankings
 
 
 async def _build_league_detail(

@@ -3,7 +3,8 @@ import { Match } from '@/types/matches'
 import { Prediction } from '@/services/predictions'
 import { getCountryCodeForFlag } from '@/utils/countryFlags'
 import { abbreviateCountryName } from '@/utils/countryNames'
-import { formatMatchDateLocal, formatMatchKickoffLocal, isPredictionLocked } from '@/utils/timezone'
+import { formatMatchKickoffLocal, isPredictionLocked } from '@/utils/timezone'
+import { getPredictionRowColors, PREDICTION_MAX_POINTS } from '@/utils/predictions'
 
 interface PredictionRowCardProps {
   match: Match
@@ -102,15 +103,8 @@ export const PredictionRowCard: React.FC<PredictionRowCardProps> = ({
     if (!isFinalized) {
       return { backgroundColor: 'white', color: 'inherit' }
     }
-    
-    const maxPoints = 100
-    const userPoints = prediction?.points ?? 0
-    
-    if (userPoints === maxPoints) {
-      return { backgroundColor: 'lightgreen', color: 'darkgreen' }
-    }
-    
-    return { backgroundColor: '#FF9869', color: 'navajowhite' }
+
+    return getPredictionRowColors(match.status, prediction?.points ?? 0, hasPrediction)
   }
 
   const cardStyle = getFinalizedCardStyle()
@@ -123,10 +117,12 @@ export const PredictionRowCard: React.FC<PredictionRowCardProps> = ({
   // Get border color for finalized matches
   const getBorderClass = () => {
     if (!isFinalized) return 'border-neutral-DEFAULT/20'
-    const maxPoints = 100
     const userPoints = prediction?.points ?? 0
-    if (userPoints === maxPoints) {
+    if (userPoints === PREDICTION_MAX_POINTS) {
       return 'border-darkgreen/50'
+    }
+    if (userPoints === 0) {
+      return 'border-neutral-DEFAULT/30'
     }
     return 'border-navajowhite/50'
   }

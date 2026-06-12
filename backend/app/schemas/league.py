@@ -58,6 +58,7 @@ class LeagueMemberRanking(BaseModel):
     user_id: int
     username: str
     total_points: int
+    perfect_predictions: int = 0
 
 
 class LeagueDetail(BaseModel):

@@ -34,7 +34,7 @@ async def build_league_progress(
     if not rankings:
         return LeagueProgressResponse(matches=[], members=[], has_scored_matches=False)
 
-    top_five_ids = {user_id for user_id, _, _ in rankings[:5]}
+    top_five_ids = {user_id for user_id, _, _, _ in rankings[:5]}
 
     games_result = await db.execute(
         select(Game)
@@ -55,7 +55,7 @@ async def build_league_progress(
     points_by_user_game: Dict[Tuple[int, int], int] = {}
     if games:
         game_ids = [game.id for game in games]
-        member_ids = [user_id for user_id, _, _ in rankings]
+        member_ids = [user_id for user_id, _, _, _ in rankings]
         predictions_result = await db.execute(
             select(Prediction.user_id, Prediction.game_id, Prediction.points).where(
                 Prediction.user_id.in_(member_ids),
@@ -93,7 +93,13 @@ async def build_league_progress(
         )
 
     members: List[LeagueProgressMember] = []
-    for rank, (user_id, username, total_points) in enumerate(rankings, start=1):
+    previous_points: int | None = None
+    current_rank = 0
+
+    for index, (user_id, username, total_points, _) in enumerate(rankings, start=1):
+        if previous_points is None or total_points != previous_points:
+            current_rank = index
+
         cumulative = [0]
         for game in games:
             match_points = points_by_user_game.get((user_id, game.id), 0)
@@ -103,13 +109,14 @@ async def build_league_progress(
             LeagueProgressMember(
                 user_id=user_id,
                 username=username,
-                rank=rank,
+                rank=current_rank,
                 total_points=total_points,
                 is_top_five=user_id in top_five_ids,
                 is_current_user=user_id == current_user_id,
                 points=cumulative,
             )
         )
+        previous_points = total_points
 
     return LeagueProgressResponse(
         matches=matches,

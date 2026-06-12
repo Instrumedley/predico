@@ -47,7 +47,7 @@ async def test_build_league_progress_cumulative_points():
 
     with patch(
         "app.services.league_progress_service.get_league_rankings",
-        new=AsyncMock(return_value=[(1, "alice", 150), (2, "bob", 50)]),
+        new=AsyncMock(return_value=[(1, "alice", 150, 2), (2, "bob", 50, 0)]),
     ):
         games_result = MagicMock()
         games_scalars = MagicMock()

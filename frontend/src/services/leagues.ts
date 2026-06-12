@@ -18,6 +18,7 @@ export interface LeagueMemberRanking {
   user_id: number
   username: string
   total_points: number
+  perfect_predictions: number
 }
 
 export interface LeagueMemberPrediction {

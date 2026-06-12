@@ -13,10 +13,10 @@ from app.services.token_service import TokenService
 INVITE_EXPIRY_DAYS = 30
 
 
-async def get_league_rankings(db: AsyncSession, league_id: int) -> List[Tuple[int, str, int]]:
+async def get_league_rankings(db: AsyncSession, league_id: int) -> List[Tuple[int, str, int, int]]:
     """
-    Return league standings as (user_id, username, total_points) sorted by points desc.
-    Points are the sum of all scored predictions for each member.
+    Return league standings as (user_id, username, total_points, perfect_predictions)
+    sorted by points desc, then username asc.
     """
     points_subquery = (
         select(
@@ -27,19 +27,34 @@ async def get_league_rankings(db: AsyncSession, league_id: int) -> List[Tuple[in
         .subquery()
     )
 
+    perfect_subquery = (
+        select(
+            Prediction.user_id.label("user_id"),
+            func.count(Prediction.id).label("perfect_predictions"),
+        )
+        .where(Prediction.points == 100)
+        .group_by(Prediction.user_id)
+        .subquery()
+    )
+
     result = await db.execute(
         select(
             User.id,
             User.username,
             func.coalesce(points_subquery.c.total_points, 0).label("total_points"),
+            func.coalesce(perfect_subquery.c.perfect_predictions, 0).label("perfect_predictions"),
         )
         .join(LeagueMember, LeagueMember.user_id == User.id)
         .outerjoin(points_subquery, points_subquery.c.user_id == User.id)
+        .outerjoin(perfect_subquery, perfect_subquery.c.user_id == User.id)
         .where(LeagueMember.league_id == league_id)
         .order_by(func.coalesce(points_subquery.c.total_points, 0).desc(), User.username.asc())
     )
 
-    return [(row.id, row.username, int(row.total_points)) for row in result.all()]
+    return [
+        (row.id, row.username, int(row.total_points), int(row.perfect_predictions))
+        for row in result.all()
+    ]
 
 
 async def sync_league_member_points(db: AsyncSession, user_id: int) -> None:

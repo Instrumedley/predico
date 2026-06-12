@@ -3,6 +3,7 @@ import { getCountryCodeForFlag } from '@/utils/countryFlags'
 import {
   formatMatchDateLabel,
   formatPredictionScoreLabel,
+  getPredictionRowColors,
 } from '@/utils/predictions'
 
 export interface UserPredictionRow {
@@ -48,11 +49,12 @@ export const UserPredictionsTable: React.FC<UserPredictionsTableProps> = ({
           {predictions.map((prediction) => {
             const { game } = prediction
             const scoreLabel = formatPredictionScoreLabel(game.status, prediction.points)
+            const rowColors = getPredictionRowColors(game.status, prediction.points)
 
             return (
               <tr
                 key={prediction.id}
-                className="border-b border-neutral-DEFAULT/10 last:border-0"
+                style={rowColors}
               >
                 {showMatchDate && (
                   <td className="py-3 pr-4 text-neutral-DEFAULT/80 whitespace-nowrap">
@@ -60,17 +62,17 @@ export const UserPredictionsTable: React.FC<UserPredictionsTableProps> = ({
                   </td>
                 )}
                 <td className="py-3 pr-4">
-                  <div className="flex flex-wrap items-center gap-2 text-neutral-DEFAULT">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span
                       className={`fi fi-${getCountryCodeForFlag(game.home_team.country_code)} fis`}
                       style={{ fontSize: '1.1rem' }}
                     />
                     <span className="font-medium">{game.home_team.name}</span>
-                    <span className="px-2 py-0.5 rounded bg-neutral-light font-semibold">
+                    <span className="px-2 py-0.5 rounded bg-black/5 font-semibold">
                       {prediction.predicted_home_score}
                     </span>
-                    <span className="text-neutral-DEFAULT/60">vs</span>
-                    <span className="px-2 py-0.5 rounded bg-neutral-light font-semibold">
+                    <span className="opacity-70">vs</span>
+                    <span className="px-2 py-0.5 rounded bg-black/5 font-semibold">
                       {prediction.predicted_away_score}
                     </span>
                     <span className="font-medium">{game.away_team.name}</span>
@@ -84,8 +86,8 @@ export const UserPredictionsTable: React.FC<UserPredictionsTableProps> = ({
                   <span
                     className={
                       scoreLabel === 'Not computed'
-                        ? 'text-neutral-DEFAULT/60 italic'
-                        : 'font-semibold text-neutral-DEFAULT'
+                        ? 'italic opacity-70'
+                        : 'font-semibold'
                     }
                   >
                     {scoreLabel}
