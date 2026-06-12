@@ -3,7 +3,7 @@ import { Match } from '@/types/matches'
 import { Prediction } from '@/services/predictions'
 import { getCountryCodeForFlag } from '@/utils/countryFlags'
 import { abbreviateCountryName } from '@/utils/countryNames'
-import { formatMatchKickoffLocal, isPredictionLocked } from '@/utils/timezone'
+import { formatMatchDateLocal, formatMatchKickoffLocal, isPredictionLocked } from '@/utils/timezone'
 import { getPredictionRowColors, PREDICTION_MAX_POINTS } from '@/utils/predictions'
 
 interface PredictionRowCardProps {

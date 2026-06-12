@@ -37,12 +37,12 @@ export const UserPredictionsTable: React.FC<UserPredictionsTableProps> = ({
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-neutral-DEFAULT/20 text-left text-neutral-DEFAULT/70">
+          <tr className="border-b border-neutral-DEFAULT/20 text-left text-neutral-DEFAULT">
             {showMatchDate && (
-              <th className="py-2 pr-4 font-medium w-32">Date</th>
+              <th className="py-2.5 pr-4 text-base font-bold w-32">Date</th>
             )}
-            <th className="py-2 pr-4 font-medium">Match & prediction</th>
-            <th className="py-2 font-medium w-32">Score</th>
+            <th className="py-2.5 pr-4 text-base font-bold">Match & prediction</th>
+            <th className="py-2.5 text-base font-bold w-32">Score</th>
           </tr>
         </thead>
         <tbody>
