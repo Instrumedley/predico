@@ -182,7 +182,9 @@ async def login(credentials: LoginRequest, db: AsyncSession = Depends(get_db)):
         expires_delta=expires_delta,
     )
 
+    user.last_login = datetime.utcnow()
     await accept_pending_invites_for_user(db, user)
+    await db.commit()
     
     return LoginResponse(
         access_token=access_token,

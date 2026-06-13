@@ -26,6 +26,7 @@ class User(Base):
     cognito_user_id = Column(String, nullable=True, unique=True, index=True)  # AWS Cognito user ID
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_login = Column(DateTime, nullable=True)
     
     # Relationships
     predictions = relationship("Prediction", back_populates="user", cascade="all, delete-orphan")

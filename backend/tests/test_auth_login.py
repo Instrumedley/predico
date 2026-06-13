@@ -163,3 +163,29 @@ async def test_login_with_remember_me_uses_30_day_token(client: AsyncClient, tes
     assert expires_at > now + timedelta(days=29)
     assert expires_at < now + timedelta(days=31)
 
+
+@pytest.mark.asyncio
+async def test_login_updates_last_login(client: AsyncClient, db_session, test_user_data):
+    """Successful login should persist last_login on the user record."""
+    from sqlalchemy import select
+
+    from app.db.models import User
+
+    await client.post("/api/v1/auth/signup", json=test_user_data)
+
+    before = datetime.utcnow()
+    response = await client.post("/api/v1/auth/login", json={
+        "email": test_user_data["email"],
+        "password": test_user_data["password"],
+    })
+
+    assert response.status_code == 200
+    assert "last_login" not in response.json()["user"]
+
+    result = await db_session.execute(
+        select(User).where(User.email == test_user_data["email"])
+    )
+    user = result.scalar_one()
+    assert user.last_login is not None
+    assert user.last_login >= before
+
