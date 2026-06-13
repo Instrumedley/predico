@@ -2,10 +2,12 @@
  * Authentication service.
  */
 import apiClient from './api'
+import { clearAuthSession } from '@/utils/authStorage'
 
 export interface LoginCredentials {
   email: string
   password: string
+  rememberMe?: boolean
 }
 
 export interface SignupData {
@@ -41,7 +43,11 @@ export interface SignupResponse {
 
 export const authService = {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const response = await apiClient.post<AuthResponse>('/api/v1/auth/login', credentials)
+    const response = await apiClient.post<AuthResponse>('/api/v1/auth/login', {
+      email: credentials.email,
+      password: credentials.password,
+      remember_me: credentials.rememberMe ?? false,
+    })
     return response.data
   },
 
@@ -51,8 +57,7 @@ export const authService = {
   },
 
   async logout(): Promise<void> {
-    // Clear token from localStorage
-    localStorage.removeItem('access_token')
+    clearAuthSession()
   },
 
   async verifyEmail(token: string): Promise<{ message: string }> {

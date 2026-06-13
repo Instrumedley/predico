@@ -27,7 +27,8 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours when "remember me" is unchecked
+    REMEMBER_ME_TOKEN_EXPIRE_DAYS: int = 30
     
     # Database
     DATABASE_URL: str

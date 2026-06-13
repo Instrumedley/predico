@@ -3,6 +3,13 @@
  */
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { authService, AuthResponse } from '@/services/auth'
+import {
+  clearAuthSession,
+  getAccessToken,
+  getUserDataRaw,
+  setAuthSession,
+  updateStoredUserData,
+} from '@/utils/authStorage'
 
 interface User {
   id: number
@@ -34,11 +41,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const { authService } = await import('@/services/auth')
       const userData = await authService.getCurrentUser()
       setUser(userData)
-      localStorage.setItem('user_data', JSON.stringify(userData))
+      updateStoredUserData(userData)
     } catch (error) {
       // If refresh fails, clear auth data
-      localStorage.removeItem('access_token')
-      localStorage.removeItem('user_data')
+      clearAuthSession()
       setUser(null)
       throw error
     }
@@ -48,12 +54,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Check if user is already logged in
     const restoreAuth = async () => {
       try {
-        const token = localStorage.getItem('access_token')
-        const storedUser = localStorage.getItem('user_data')
+        const token = getAccessToken()
+        const storedUser = getUserDataRaw()
         
         if (token && storedUser) {
           try {
-            // Restore user from localStorage
+            // Restore user from storage
             const userData = JSON.parse(storedUser) as User
             setUser(userData)
             
@@ -61,13 +67,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             try {
               await refreshUser()
             } catch (error) {
-              // If refresh fails, keep localStorage data but log error
+              // If refresh fails, keep cached data but log error
               console.warn('Failed to refresh user data, using cached data')
             }
           } catch (error) {
             // Invalid stored data, clear it
-            localStorage.removeItem('access_token')
-            localStorage.removeItem('user_data')
+            clearAuthSession()
           }
         }
       } finally {
@@ -80,19 +85,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [])
 
   const login = async (email: string, password: string, rememberMe: boolean = false) => {
-    const response: AuthResponse = await authService.login({ email, password })
-    
-    // Always store token and user data in localStorage for persistence on refresh
-    localStorage.setItem('access_token', response.access_token)
-    localStorage.setItem('user_data', JSON.stringify(response.user))
-    
-    // Store rememberMe preference (can be used for future features like longer token expiration)
-    if (rememberMe) {
-      localStorage.setItem('remember_me', 'true')
-    } else {
-      localStorage.removeItem('remember_me')
-    }
-    
+    const response: AuthResponse = await authService.login({ email, password, rememberMe })
+
+    setAuthSession(response.access_token, response.user, rememberMe)
     setUser(response.user)
     
     // Refresh user data to get latest info including is_superuser
@@ -112,9 +107,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = async () => {
     await authService.logout()
-    // Clear all auth-related data
-    localStorage.removeItem('user_data')
-    localStorage.removeItem('remember_me')
+    clearAuthSession()
     setUser(null)
   }
 
@@ -143,4 +136,3 @@ export const useAuth = () => {
   }
   return context
 }
-

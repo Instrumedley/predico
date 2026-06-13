@@ -58,6 +58,7 @@ class LoginRequest(BaseModel):
     """Schema for login request."""
     email: EmailStr
     password: str
+    remember_me: bool = False
 
 
 class LoginResponse(BaseModel):

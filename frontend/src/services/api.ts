@@ -2,6 +2,7 @@
  * API client configuration and base setup.
  */
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios'
+import { clearAuthSession, getAccessToken } from '@/utils/authStorage'
 
 // Use relative URL to go through Vite proxy in development
 // In production, this will be set via VITE_API_BASE_URL environment variable
@@ -19,7 +20,7 @@ const apiClient: AxiosInstance = axios.create({
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('access_token')
+    const token = getAccessToken()
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -36,9 +37,7 @@ apiClient.interceptors.response.use(
   async (error) => {
     if (error.response?.status === 401) {
       // Handle unauthorized - clear all auth data and redirect to login
-      localStorage.removeItem('access_token')
-      localStorage.removeItem('user_data')
-      localStorage.removeItem('remember_me')
+      clearAuthSession()
       window.location.href = '/login'
     }
     return Promise.reject(error)

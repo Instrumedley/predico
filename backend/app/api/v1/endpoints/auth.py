@@ -172,8 +172,14 @@ async def login(credentials: LoginRequest, db: AsyncSession = Depends(get_db)):
         )
     
     # Create access token (our JWT for API authentication)
+    if credentials.remember_me:
+        expires_delta = timedelta(days=settings.REMEMBER_ME_TOKEN_EXPIRE_DAYS)
+    else:
+        expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+
     access_token = create_access_token(
-        data={"sub": str(user.id), "email": user.email}
+        data={"sub": str(user.id), "email": user.email},
+        expires_delta=expires_delta,
     )
 
     await accept_pending_invites_for_user(db, user)

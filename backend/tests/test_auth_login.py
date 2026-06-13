@@ -1,8 +1,12 @@
 """
 Tests for user login functionality (TDD).
 """
+from datetime import datetime, timedelta
+
 import pytest
 from httpx import AsyncClient
+
+from app.core.security import decode_access_token
 
 
 @pytest.mark.asyncio
@@ -116,4 +120,46 @@ async def test_login_token_validity(client: AsyncClient, test_user_data):
     # We'll need a protected endpoint for this test
     # For now, this documents expected behavior
     assert len(token) > 0  # Basic check that token exists
+
+
+@pytest.mark.asyncio
+async def test_login_without_remember_me_uses_24_hour_token(client: AsyncClient, test_user_data):
+    """Default login should issue a token valid for about 24 hours."""
+    await client.post("/api/v1/auth/signup", json=test_user_data)
+
+    response = await client.post("/api/v1/auth/login", json={
+        "email": test_user_data["email"],
+        "password": test_user_data["password"],
+        "remember_me": False,
+    })
+
+    assert response.status_code == 200
+    payload = decode_access_token(response.json()["access_token"])
+    assert payload is not None
+
+    expires_at = datetime.utcfromtimestamp(payload["exp"])
+    now = datetime.utcnow()
+    assert expires_at > now + timedelta(hours=23)
+    assert expires_at < now + timedelta(hours=25)
+
+
+@pytest.mark.asyncio
+async def test_login_with_remember_me_uses_30_day_token(client: AsyncClient, test_user_data):
+    """Remember-me login should issue a token valid for about 30 days."""
+    await client.post("/api/v1/auth/signup", json=test_user_data)
+
+    response = await client.post("/api/v1/auth/login", json={
+        "email": test_user_data["email"],
+        "password": test_user_data["password"],
+        "remember_me": True,
+    })
+
+    assert response.status_code == 200
+    payload = decode_access_token(response.json()["access_token"])
+    assert payload is not None
+
+    expires_at = datetime.utcfromtimestamp(payload["exp"])
+    now = datetime.utcnow()
+    assert expires_at > now + timedelta(days=29)
+    assert expires_at < now + timedelta(days=31)
 
