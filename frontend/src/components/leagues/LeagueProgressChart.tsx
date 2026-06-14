@@ -32,6 +32,32 @@ const EXTENDED_LINE_COLORS = [
 ]
 const CURRENT_USER_COLOR = '#0f766e'
 
+/** Rank bands 1-5, 6-10, 11-15, 16-20 — greens, oranges, blues, purples. */
+export const RANK_CLUSTER_COLORS: readonly (readonly string[])[] = [
+  ['#8DB600', '#0BDA51', '#22C55E', '#009E60', '#84CC16'],
+  ['#FFBF00', '#FFD700', '#FF9F00', '#C04000', '#DC2626'],
+  ['#007FFF', '#06B6D4', '#6CB4EE', '#008080', '#40E0D0'],
+  ['#9966CC', '#FBAED2', '#A855F7', '#D946EF', '#7E22CE'],
+]
+
+export function shouldUseRankClusterColors(memberCount: number): boolean {
+  return memberCount > 10
+}
+
+export function getRankClusterColor(rank: number): string {
+  if (rank < 1) {
+    return LINE_COLORS[0]
+  }
+
+  const clusterIndex = Math.min(
+    Math.floor((rank - 1) / 5),
+    RANK_CLUSTER_COLORS.length - 1
+  )
+  const shadeIndex = (rank - 1) % 5
+
+  return RANK_CLUSTER_COLORS[clusterIndex][shadeIndex]
+}
+
 export type MemberFilter = 'all' | 'top5'
 
 export interface ChartRow {
@@ -90,11 +116,21 @@ export function buildChartData(
   return rows
 }
 
-function getMemberColor(member: LeagueProgressMember, paletteIndex: number, useExtendedPalette: boolean): string {
+function getMemberColor(
+  member: LeagueProgressMember,
+  paletteIndex: number,
+  memberCount: number,
+  showAllMembers: boolean
+): string {
+  if (shouldUseRankClusterColors(memberCount)) {
+    return getRankClusterColor(member.rank)
+  }
+
   if (member.is_current_user) {
     return CURRENT_USER_COLOR
   }
-  const palette = useExtendedPalette ? EXTENDED_LINE_COLORS : LINE_COLORS
+
+  const palette = showAllMembers ? EXTENDED_LINE_COLORS : LINE_COLORS
   return palette[paletteIndex % palette.length]
 }
 
@@ -252,7 +288,12 @@ export const LeagueProgressChart: React.FC<LeagueProgressChartProps> = ({
                   type="linear"
                   dataKey={`u${member.user_id}`}
                   name={member.username}
-                  stroke={getMemberColor(member, index, effectiveFilter === 'all')}
+                  stroke={getMemberColor(
+                    member,
+                    index,
+                    visibleMembers.length,
+                    effectiveFilter === 'all'
+                  )}
                   strokeWidth={member.is_current_user ? (isPreview ? 2.5 : 3.5) : isPreview ? 2 : 2.5}
                   dot={false}
                   activeDot={{ r: member.is_current_user ? (isPreview ? 4 : 6) : isPreview ? 3 : 5 }}
