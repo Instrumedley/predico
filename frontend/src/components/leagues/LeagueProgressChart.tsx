@@ -239,7 +239,7 @@ export const LeagueProgressChart: React.FC<LeagueProgressChartProps> = ({
           {visibleMembers.map((member, index) => (
             <Line
               key={member.user_id}
-              type="stepAfter"
+              type="linear"
               dataKey={`u${member.user_id}`}
               name={member.username}
               stroke={getMemberColor(member, index, effectiveFilter === 'all')}
