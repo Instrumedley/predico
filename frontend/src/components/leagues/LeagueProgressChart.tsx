@@ -185,72 +185,84 @@ export const LeagueProgressChart: React.FC<LeagueProgressChartProps> = ({
     return Math.max(1, Math.floor(chartData.length / targetTicks))
   }, [chartData.length, isPreview])
 
+  // Keep enough horizontal space per match so linear segments stay visibly diagonal
+  // on narrow screens instead of looking like step lines.
+  const minChartWidth = useMemo(() => {
+    const pixelsPerPoint = isPreview ? 28 : 24
+    const baseMinWidth = isPreview ? 280 : 360
+    return Math.max(baseMinWidth, chartData.length * pixelsPerPoint)
+  }, [chartData.length, isPreview])
+
   return (
     <div className={className}>
-      <ResponsiveContainer width="100%" height="100%" minHeight={isPreview ? 300 : 420}>
-        <LineChart
-          data={chartData}
-          margin={{
-            top: isPreview ? 8 : 12,
-            right: isPreview ? 12 : 24,
-            left: isPreview ? 0 : 4,
-            bottom: isPreview ? 48 : 56,
-          }}
-        >
-          <CartesianGrid stroke="#e5e7eb" strokeDasharray="4 4" vertical={false} />
-          <XAxis
-            dataKey="label"
-            tick={{ fontSize: isPreview ? 10 : 11, fill: '#6b7280' }}
-            interval={tickInterval}
-            angle={isPreview ? -40 : -35}
-            textAnchor="end"
-            height={isPreview ? 56 : 70}
-          />
-          <YAxis
-            tick={{ fontSize: isPreview ? 10 : 12, fill: '#6b7280' }}
-            allowDecimals={false}
-            width={isPreview ? 36 : 48}
-            label={
-              isPreview
-                ? undefined
-                : {
-                    value: 'Points',
-                    angle: -90,
-                    position: 'insideLeft',
-                    fill: '#6b7280',
-                    style: { textAnchor: 'middle' },
+      <div className="h-full w-full overflow-x-auto overflow-y-hidden overscroll-x-contain [-webkit-overflow-scrolling:touch]">
+        <div className="h-full" style={{ width: `max(100%, ${minChartWidth}px)` }}>
+          <ResponsiveContainer width="100%" height="100%" minHeight={isPreview ? 300 : 420}>
+            <LineChart
+              data={chartData}
+              margin={{
+                top: isPreview ? 8 : 12,
+                right: isPreview ? 12 : 24,
+                left: isPreview ? 0 : 4,
+                bottom: isPreview ? 48 : 56,
+              }}
+            >
+              <CartesianGrid stroke="#e5e7eb" strokeDasharray="4 4" vertical={false} />
+              <XAxis
+                dataKey="label"
+                tick={{ fontSize: isPreview ? 10 : 11, fill: '#6b7280' }}
+                interval={tickInterval}
+                angle={isPreview ? -40 : -35}
+                textAnchor="end"
+                height={isPreview ? 56 : 70}
+              />
+              <YAxis
+                tick={{ fontSize: isPreview ? 10 : 12, fill: '#6b7280' }}
+                allowDecimals={false}
+                width={isPreview ? 36 : 48}
+                label={
+                  isPreview
+                    ? undefined
+                    : {
+                        value: 'Points',
+                        angle: -90,
+                        position: 'insideLeft',
+                        fill: '#6b7280',
+                        style: { textAnchor: 'middle' },
+                      }
+                }
+              />
+              <Tooltip content={<ProgressTooltip chartRows={chartData} />} />
+              <Legend
+                verticalAlign="bottom"
+                height={isPreview ? 36 : 48}
+                wrapperStyle={{ paddingTop: isPreview ? 8 : 16 }}
+                iconSize={isPreview ? 8 : 14}
+                formatter={(value) => {
+                  const member = visibleMembers.find((item) => item.username === value)
+                  if (member?.is_current_user) {
+                    return `${value} (You)`
                   }
-            }
-          />
-          <Tooltip content={<ProgressTooltip chartRows={chartData} />} />
-          <Legend
-            verticalAlign="bottom"
-            height={isPreview ? 36 : 48}
-            wrapperStyle={{ paddingTop: isPreview ? 8 : 16 }}
-            iconSize={isPreview ? 8 : 14}
-            formatter={(value) => {
-              const member = visibleMembers.find((item) => item.username === value)
-              if (member?.is_current_user) {
-                return `${value} (You)`
-              }
-              return String(value)
-            }}
-          />
-          {visibleMembers.map((member, index) => (
-            <Line
-              key={member.user_id}
-              type="linear"
-              dataKey={`u${member.user_id}`}
-              name={member.username}
-              stroke={getMemberColor(member, index, effectiveFilter === 'all')}
-              strokeWidth={member.is_current_user ? (isPreview ? 2.5 : 3.5) : isPreview ? 2 : 2.5}
-              dot={false}
-              activeDot={{ r: member.is_current_user ? (isPreview ? 4 : 6) : isPreview ? 3 : 5 }}
-              isAnimationActive={!isPreview}
-            />
-          ))}
-        </LineChart>
-      </ResponsiveContainer>
+                  return String(value)
+                }}
+              />
+              {visibleMembers.map((member, index) => (
+                <Line
+                  key={member.user_id}
+                  type="linear"
+                  dataKey={`u${member.user_id}`}
+                  name={member.username}
+                  stroke={getMemberColor(member, index, effectiveFilter === 'all')}
+                  strokeWidth={member.is_current_user ? (isPreview ? 2.5 : 3.5) : isPreview ? 2 : 2.5}
+                  dot={false}
+                  activeDot={{ r: member.is_current_user ? (isPreview ? 4 : 6) : isPreview ? 3 : 5 }}
+                  isAnimationActive={!isPreview}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
     </div>
   )
 }
