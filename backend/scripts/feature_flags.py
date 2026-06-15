@@ -6,8 +6,15 @@ Usage (local — updates backend/.env):
   python scripts/feature_flags.py league-progress-chart off
   python scripts/feature_flags.py league-progress-chart status
 
+  python scripts/feature_flags.py knockout-stage on
+  python scripts/feature_flags.py knockout-stage on --default true
+  python scripts/feature_flags.py knockout-stage on --default false
+  python scripts/feature_flags.py knockout-stage off
+  python scripts/feature_flags.py knockout-stage status
+
 Usage (Heroku — prints the command to run):
   python scripts/feature_flags.py league-progress-chart on --heroku predico-api
+  python scripts/feature_flags.py knockout-stage on --default true --heroku predico-api
 """
 from __future__ import annotations
 
@@ -19,8 +26,14 @@ from pathlib import Path
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
 ENV_FILE = BACKEND_ROOT / ".env"
 
-FLAGS = {
-    "league-progress-chart": "LEAGUE_PROGRESS_CHART_ENABLED",
+FLAG_DEFINITIONS = {
+    "league-progress-chart": {
+        "enabled": "LEAGUE_PROGRESS_CHART_ENABLED",
+    },
+    "knockout-stage": {
+        "enabled": "KNOCKOUT_STAGE_ENABLED",
+        "default": "KNOCKOUT_STAGE_DEFAULT",
+    },
 }
 
 
@@ -75,11 +88,32 @@ def get_flag(key: str) -> str | None:
     return None
 
 
+def _print_status(flag_name: str) -> int:
+    definition = FLAG_DEFINITIONS[flag_name]
+    enabled_key = definition["enabled"]
+    enabled_value = get_flag(enabled_key)
+
+    if enabled_value is None:
+        print(f"{enabled_key} is not set in {ENV_FILE} (defaults to false).")
+    else:
+        print(f"{enabled_key}={enabled_value}")
+
+    default_key = definition.get("default")
+    if default_key:
+        default_value = get_flag(default_key)
+        if default_value is None:
+            print(f"{default_key} is not set in {ENV_FILE} (defaults to false).")
+        else:
+            print(f"{default_key}={default_value}")
+
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Toggle Predico backend feature flags.")
     parser.add_argument(
         "flag",
-        choices=sorted(FLAGS.keys()),
+        choices=sorted(FLAG_DEFINITIONS.keys()),
         help="Feature flag to manage",
     )
     parser.add_argument(
@@ -88,32 +122,60 @@ def main() -> int:
         help="Enable, disable, or show current local value",
     )
     parser.add_argument(
+        "--default",
+        type=_parse_bool,
+        dest="default_view",
+        help='For knockout-stage: default dashboard tab when enabled (true=knockout, false=group).',
+    )
+    parser.add_argument(
         "--heroku",
         metavar="APP_NAME",
         help="Print heroku config:set command instead of editing local .env",
     )
     args = parser.parse_args()
 
-    env_key = FLAGS[args.flag]
+    definition = FLAG_DEFINITIONS[args.flag]
+    enabled_key = definition["enabled"]
+    default_key = definition.get("default")
 
     if args.state == "status":
-        current = get_flag(env_key)
-        if current is None:
-            print(f"{env_key} is not set in {ENV_FILE} (defaults to false).")
-        else:
-            print(f"{env_key}={current}")
-        return 0
+        return _print_status(args.flag)
 
     enabled = args.state == "on"
-    value = "true" if enabled else "false"
+    enabled_value = "true" if enabled else "false"
 
     if args.heroku:
-        print(f'heroku config:set {env_key}={value} -a {args.heroku}')
+        parts = [f"{enabled_key}={enabled_value}"]
+        if enabled and default_key and args.default_view is not None:
+            parts.append(f"{default_key}={'true' if args.default_view else 'false'}")
+        elif enabled and default_key and args.default_view is None:
+            current_default = get_flag(default_key)
+            if current_default is not None:
+                parts.append(f"{default_key}={current_default}")
+        print(f"heroku config:set {' '.join(parts)} -a {args.heroku}")
         print("Restart is not required; the dyno picks up config on next request.")
         return 0
 
-    set_flag(env_key, enabled)
-    print(f"Updated {ENV_FILE}: {env_key}={value}")
+    if args.state == "off":
+        set_flag(enabled_key, False)
+        print(f"Updated {ENV_FILE}: {enabled_key}=false")
+        print("Restart the backend container/process to apply.")
+        return 0
+
+    set_flag(enabled_key, True)
+    messages = [f"{enabled_key}=true"]
+
+    if default_key:
+        if args.default_view is not None:
+            set_flag(default_key, args.default_view)
+            messages.append(f"{default_key}={'true' if args.default_view else 'false'}")
+        else:
+            current_default = get_flag(default_key)
+            if current_default is None:
+                set_flag(default_key, False)
+                messages.append(f"{default_key}=false")
+
+    print(f"Updated {ENV_FILE}: {', '.join(messages)}")
     print("Restart the backend container/process to apply.")
     return 0
 

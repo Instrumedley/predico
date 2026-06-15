@@ -9,6 +9,7 @@ interface ModalState {
   confirmText?: string
   cancelText?: string
   onConfirm?: () => void | Promise<void>
+  onCancel?: () => void
 }
 
 interface ModalContextType {
@@ -18,7 +19,8 @@ interface ModalContextType {
     message: string,
     onConfirm: () => void | Promise<void>,
     confirmText?: string,
-    cancelText?: string
+    cancelText?: string,
+    onCancel?: () => void
   ) => void
   showSuccess: (title: string, message: string) => void
   showError: (title: string, message: string) => void
@@ -49,7 +51,8 @@ export const ModalProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       message: string,
       onConfirm: () => void | Promise<void>,
       confirmText = 'Confirm',
-      cancelText = 'Cancel'
+      cancelText = 'Cancel',
+      onCancel?: () => void
     ) => {
       setModalState({
         isOpen: true,
@@ -59,6 +62,7 @@ export const ModalProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         confirmText,
         cancelText,
         onConfirm,
+        onCancel,
       })
     },
     []
@@ -120,6 +124,7 @@ export const ModalProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       <Modal
         isOpen={modalState.isOpen}
         onClose={closeModal}
+        onCancel={modalState.onCancel}
         onConfirm={modalState.onConfirm ? handleConfirm : undefined}
         title={modalState.title}
         message={modalState.message}

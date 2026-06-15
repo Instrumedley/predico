@@ -10,6 +10,7 @@ from app.db.models.group import Group, GroupTeam
 from app.db.models.game import Game, GameStatus
 from app.db.models.prediction import Prediction
 from app.db.models.league import League, LeagueMember, LeagueInvitation
+from app.db.models.knockout_result import KnockoutMatchResult
 
 __all__ = [
     "User",
@@ -25,4 +26,5 @@ __all__ = [
     "League",
     "LeagueMember",
     "LeagueInvitation",
+    "KnockoutMatchResult",
 ]

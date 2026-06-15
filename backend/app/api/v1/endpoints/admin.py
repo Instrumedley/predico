@@ -12,9 +12,11 @@ from sqlalchemy.orm import selectinload
 
 from app.core.security import get_current_user
 from app.db.database import get_db
-from app.db.models import Game, Prediction, User
+from app.db.models import Game, Prediction, User, KnockoutMatchResult
 from app.db.models.game import GameStatus
 from app.api.v1.endpoints.games import GameResponse, game_to_response
+from app.services.knockout.bracket_service import bracket_to_api_dict, build_knockout_bracket
+from app.services.knockout.bracket_structure import KNOCKOUT_MATCH_DEFS
 
 router = APIRouter()
 
@@ -22,6 +24,12 @@ router = APIRouter()
 class UpdateGameResultRequest(BaseModel):
     home_score: int
     away_score: int
+
+
+class UpdateKnockoutMatchRequest(BaseModel):
+    home_score: int
+    away_score: int
+    winner_team_id: int
 
 
 class AdminUserSummary(BaseModel):
@@ -237,6 +245,116 @@ async def update_game_result(
     }
 
 
+@router.get("/knockout/bracket")
+async def get_admin_knockout_bracket(
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(require_admin),
+):
+    """Return the knockout bracket for admin editing."""
+    bracket = await build_knockout_bracket(db)
+    return bracket_to_api_dict(bracket)
+
+
+@router.put("/knockout/matches/{match_number}")
+async def update_knockout_match_result(
+    match_number: int,
+    payload: UpdateKnockoutMatchRequest,
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(require_admin),
+):
+    """Save knockout match scores and the team that advances (including after extra time/penalties)."""
+    if match_number not in KNOCKOUT_MATCH_DEFS:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Knockout match {match_number} is not defined",
+        )
+
+    bracket = await build_knockout_bracket(db)
+    all_matches = [
+        *bracket.left.round_of32,
+        *bracket.left.round_of16,
+        *bracket.left.quarter_finals,
+        bracket.left.semi_final,
+        *bracket.right.round_of32,
+        *bracket.right.round_of16,
+        *bracket.right.quarter_finals,
+        bracket.right.semi_final,
+        bracket.final,
+        bracket.third_place,
+    ]
+    current = next((match for match in all_matches if match.match_number == match_number), None)
+    if not current:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Knockout match {match_number} could not be resolved",
+        )
+
+    participant_ids = {
+        team_id
+        for team_id in (
+            current.home.team.team_id if current.home.team else None,
+            current.away.team.team_id if current.away.team else None,
+        )
+        if team_id is not None
+    }
+    if payload.winner_team_id not in participant_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="winner_team_id must be one of the two teams in this match",
+        )
+    if not participant_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Both teams must be known before recording a knockout result",
+        )
+
+    existing_query = select(KnockoutMatchResult).where(
+        KnockoutMatchResult.match_number == match_number
+    )
+    existing_result = await db.execute(existing_query)
+    record = existing_result.scalar_one_or_none()
+
+    if record is None:
+        record = KnockoutMatchResult(match_number=match_number)
+        db.add(record)
+
+    record.home_score = payload.home_score
+    record.away_score = payload.away_score
+    record.winner_team_id = payload.winner_team_id
+    await db.commit()
+
+    updated_bracket = await build_knockout_bracket(db)
+    return {
+        "message": "Knockout match result saved",
+        "match_number": match_number,
+        "bracket": bracket_to_api_dict(updated_bracket),
+    }
+
+
+@router.delete("/knockout/matches/{match_number}")
+async def reset_knockout_match_result(
+    match_number: int,
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(require_admin),
+):
+    """Clear a knockout match result."""
+    existing_query = select(KnockoutMatchResult).where(
+        KnockoutMatchResult.match_number == match_number
+    )
+    existing_result = await db.execute(existing_query)
+    record = existing_result.scalar_one_or_none()
+    if record is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No saved result for knockout match {match_number}",
+        )
+
+    await db.delete(record)
+    await db.commit()
+
+    return {"message": "Knockout match result cleared", "match_number": match_number}
+
+
 @router.post("/games/{game_id}/reset", response_model=dict)
 async def reset_game(
     game_id: int,
@@ -344,12 +462,18 @@ async def reset_all_games(
         prediction.correct_goal_difference_points = 0
         prediction.is_calculated = False
         predictions_reset += 1
-    
+
+    knockout_delete = await db.execute(select(KnockoutMatchResult))
+    knockout_records = knockout_delete.scalars().all()
+    for record in knockout_records:
+        await db.delete(record)
+
     await db.commit()
-    
+
     return {
         "message": "All games reset successfully",
         "games_reset": games_reset,
-        "predictions_reset": predictions_reset
+        "predictions_reset": predictions_reset,
+        "knockout_results_reset": len(knockout_records),
     }
 
