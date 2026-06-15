@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { KnockoutBracketData } from '@/types/knockout'
 import { getKnockoutBracket } from '@/services/knockout'
 import { BracketCenterHub, BracketOuterRounds, BracketThirdPlace } from './BracketSide'
-import { BracketConnector } from './BracketMatchSlot'
+import { BRACKET_ROUND_GAP, BracketConnector } from './BracketMatchSlot'
 import type { KnockoutSavePayload } from '@/types/knockout'
 
 interface KnockoutBracketProps {
@@ -56,9 +56,9 @@ export const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
       )}
 
       {data && (
-        <div className="overflow-x-auto overscroll-x-contain rounded-xl border border-neutral-DEFAULT/20 bg-gradient-to-b from-primary-light/10 via-white to-white shadow-sm [-webkit-overflow-scrolling:touch]">
+        <div className="overflow-x-auto overscroll-x-contain rounded-xl border border-neutral-DEFAULT/20 bg-neutral-light/50 shadow-sm [-webkit-overflow-scrolling:touch]">
           <div className="inline-flex min-w-full justify-center px-3 py-5 sm:px-4 sm:py-6">
-            <div className="inline-flex min-w-max flex-col items-center px-3 py-5 sm:px-6 sm:py-6">
+            <div className="inline-flex min-w-max flex-col items-center rounded-lg bg-[linear-gradient(90deg,#ffffff_0%,rgba(149,224,108,0.07)_18%,rgba(149,224,108,0.13)_50%,rgba(149,224,108,0.07)_82%,#ffffff_100%)] px-3 py-5 sm:px-6 sm:py-6">
               <div className="inline-flex min-w-max items-start">
                 <div className="flex min-w-fit flex-1 justify-end">
                   <BracketOuterRounds
