@@ -6,6 +6,9 @@ import type { KnockoutSavePayload } from '@/types/knockout'
 import { useModal } from '@/contexts/ModalContext'
 
 export const BRACKET_TRACK_HEIGHT = 'h-[34rem] sm:h-[36rem]'
+export const BRACKET_ROUND_GAP = 'gap-2'
+/** Extra inset so SF match rows don't sit flush against bracket connectors. */
+export const BRACKET_CENTER_HUB_INSET = 'px-1.5'
 
 interface BracketMatchSlotProps {
   match: BracketMatch

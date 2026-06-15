@@ -59,8 +59,8 @@ export const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
         <div className="overflow-x-auto overscroll-x-contain rounded-xl border border-neutral-DEFAULT/20 bg-neutral-light/50 shadow-sm [-webkit-overflow-scrolling:touch]">
           <div className="inline-flex min-w-full justify-center px-3 py-5 sm:px-4 sm:py-6">
             <div className="inline-flex min-w-max flex-col items-center rounded-lg bg-[linear-gradient(90deg,#ffffff_0%,rgba(149,224,108,0.07)_18%,rgba(149,224,108,0.13)_50%,rgba(149,224,108,0.07)_82%,#ffffff_100%)] px-3 py-5 sm:px-6 sm:py-6">
-              <div className="inline-flex min-w-max items-start">
-                <div className="flex min-w-fit flex-1 justify-end">
+              <div className={`inline-flex min-w-max items-start ${BRACKET_ROUND_GAP}`}>
+                <div className={`flex min-w-fit flex-1 justify-end ${BRACKET_ROUND_GAP}`}>
                   <BracketOuterRounds
                     side={data.left}
                     direction="left"
@@ -80,7 +80,7 @@ export const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
                   onSaveMatch={onSaveMatch}
                 />
 
-                <div className="flex min-w-fit flex-1 justify-start">
+                <div className={`flex min-w-fit flex-1 justify-start ${BRACKET_ROUND_GAP}`}>
                   <BracketConnector direction="right" />
                   <BracketOuterRounds
                     side={data.right}

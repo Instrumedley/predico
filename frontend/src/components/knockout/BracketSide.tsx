@@ -1,6 +1,8 @@
 import React from 'react'
 import { BracketMatch, BracketSideData, KnockoutSavePayload } from '@/types/knockout'
 import {
+  BRACKET_CENTER_HUB_INSET,
+  BRACKET_ROUND_GAP,
   BRACKET_TRACK_HEIGHT,
   BracketConnector,
   BracketMatchSlot,
@@ -31,7 +33,7 @@ export const BracketOuterRounds: React.FC<BracketOuterRoundsProps> = ({
   const rounds = direction === 'left' ? OUTER_ROUNDS : [...OUTER_ROUNDS].reverse()
 
   return (
-    <div className="flex shrink-0 items-start">
+    <div className={`flex shrink-0 items-start ${BRACKET_ROUND_GAP}`}>
       {rounds.map((round, index) => (
         <React.Fragment key={round.key}>
           <BracketRoundColumn
@@ -65,7 +67,9 @@ export const BracketCenterHub: React.FC<BracketCenterHubProps> = ({
   savingMatchNumber = null,
   onSaveMatch,
 }) => (
-  <div className="flex shrink-0 items-start border-x border-neutral-DEFAULT/10 px-3 sm:px-4">
+  <div
+    className={`flex shrink-0 items-start border-x border-neutral-DEFAULT/10 ${BRACKET_ROUND_GAP} ${BRACKET_CENTER_HUB_INSET}`}
+  >
     <BracketRoundColumn
       label="SF"
       matches={[leftSemiFinal]}
