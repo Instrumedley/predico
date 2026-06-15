@@ -5,6 +5,8 @@ import apiClient from './api'
 
 export interface FeatureFlags {
   league_progress_chart: boolean
+  knockout_stage: boolean
+  knockout_stage_default: boolean
 }
 
 export async function getFeatureFlags(): Promise<FeatureFlags> {
