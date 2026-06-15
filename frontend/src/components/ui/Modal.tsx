@@ -5,6 +5,7 @@ export type ModalType = 'success' | 'error' | 'confirm' | 'info'
 interface ModalProps {
   isOpen: boolean
   onClose: () => void
+  onCancel?: () => void
   onConfirm?: () => void
   title: string
   message: string
@@ -16,6 +17,7 @@ interface ModalProps {
 export const Modal: React.FC<ModalProps> = ({
   isOpen,
   onClose,
+  onCancel,
   onConfirm,
   title,
   message,
@@ -23,22 +25,28 @@ export const Modal: React.FC<ModalProps> = ({
   confirmText = 'OK',
   cancelText = 'Cancel',
 }) => {
-  // Close on Escape key
+  const dismiss = React.useCallback(() => {
+    if (type === 'confirm') {
+      onCancel?.()
+    }
+    onClose()
+  }, [type, onCancel, onClose])
+
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
-        onClose()
+        dismiss()
       }
     }
     document.addEventListener('keydown', handleEscape)
     return () => document.removeEventListener('keydown', handleEscape)
-  }, [isOpen, onClose])
+  }, [isOpen, dismiss])
 
   if (!isOpen) return null
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
-      onClose()
+      dismiss()
     }
   }
 
@@ -162,7 +170,7 @@ export const Modal: React.FC<ModalProps> = ({
                   {title}
                 </h3>
                 <div className="mt-2">
-                  <p className="text-sm text-neutral-DEFAULT/70">{message}</p>
+                  <p className="whitespace-pre-line text-sm text-neutral-DEFAULT/70">{message}</p>
                 </div>
               </div>
             </div>
@@ -174,7 +182,6 @@ export const Modal: React.FC<ModalProps> = ({
                   type="button"
                   onClick={() => {
                     onConfirm?.()
-                    onClose()
                   }}
                   className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white ${getButtonColors()} focus:outline-none focus:ring-2 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm`}
                 >
@@ -182,7 +189,7 @@ export const Modal: React.FC<ModalProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={onClose}
+                  onClick={dismiss}
                   className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-medium sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                 >
                   {cancelText}
