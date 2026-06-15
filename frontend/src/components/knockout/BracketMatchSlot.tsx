@@ -47,6 +47,8 @@ interface BracketTeamRowProps {
   scoreValue?: string
   onScoreChange?: (value: string) => void
   scoreAriaLabel?: string
+  displayScore?: number | null
+  isWinner?: boolean
 }
 
 const BracketTeamRow: React.FC<BracketTeamRowProps> = ({
@@ -60,6 +62,8 @@ const BracketTeamRow: React.FC<BracketTeamRowProps> = ({
   scoreValue,
   onScoreChange,
   scoreAriaLabel,
+  displayScore,
+  isWinner = false,
 }) => {
   const flagSize = FLAG_SIZES[size]
   const team = slot.team
@@ -88,11 +92,15 @@ const BracketTeamRow: React.FC<BracketTeamRowProps> = ({
     return null
   }
 
+  const showPublicScore = !admin && displayScore != null
+
   return (
     <div
-      className={`flex w-full items-center gap-1.5 rounded-md border border-neutral-DEFAULT/30 bg-white px-1.5 py-1 shadow-sm ${TEXT_SIZES[size]} ${
-        admin && selected ? 'border-primary-medium ring-1 ring-primary-medium/40' : ''
-      }`}
+      className={`flex w-full items-center gap-1.5 rounded-md border px-1.5 py-1 shadow-sm ${TEXT_SIZES[size]} ${
+        isWinner
+          ? 'border-[#33CC9A] bg-[#33CC9A] text-white'
+          : 'border-neutral-DEFAULT/30 bg-white'
+      } ${admin && selected ? 'border-primary-medium ring-1 ring-primary-medium/40' : ''}`}
     >
       <span
         className={`fi fi-${getCountryCodeForFlag(team.countryCode)} fis shrink-0 rounded-sm`}
@@ -100,7 +108,10 @@ const BracketTeamRow: React.FC<BracketTeamRowProps> = ({
         title={team.countryName}
         aria-hidden="true"
       />
-      <span className="min-w-0 flex-1 truncate font-medium text-neutral-DEFAULT" title={team.countryName}>
+      <span
+        className={`min-w-0 flex-1 truncate font-medium ${isWinner ? 'text-white' : 'text-neutral-DEFAULT'}`}
+        title={team.countryName}
+      >
         {displayName}
       </span>
       {admin && selectable && onScoreChange && (
@@ -109,9 +120,14 @@ const BracketTeamRow: React.FC<BracketTeamRowProps> = ({
           inputMode="numeric"
           value={scoreValue ?? ''}
           onChange={(event) => onScoreChange(event.target.value.replace(/\D/g, '').slice(0, 2))}
-          className="box-border h-4 w-4 shrink-0 appearance-none rounded border border-neutral-DEFAULT/30 bg-white p-0 text-center text-[10px] leading-none text-neutral-DEFAULT/70 focus:border-neutral-DEFAULT/40 focus:outline-none"
+          className="box-border h-4 w-4 shrink-0 appearance-none rounded border border-neutral-DEFAULT/30 bg-white p-0 text-center text-[10px] font-bold leading-none text-neutral-DEFAULT/70 focus:border-neutral-DEFAULT/40 focus:outline-none"
           aria-label={scoreAriaLabel}
         />
+      )}
+      {showPublicScore && (
+        <span className="shrink-0 font-bold tabular-nums" aria-label={scoreAriaLabel}>
+          {displayScore}
+        </span>
       )}
       {admin && selectable && showAdvanceCheckbox && onSelect && (
         <button
@@ -169,6 +185,7 @@ export const BracketMatchSlot: React.FC<BracketMatchSlotProps> = ({
     awayScore !== savedAwayScore ||
     winnerTeamId !== savedWinnerTeamId
   const canSave = scoresValid && winnerTeamId != null
+  const hasPublishedScores = !admin && match.homeScore != null && match.awayScore != null
 
   React.useEffect(() => {
     setHomeScore(match.homeScore?.toString() ?? '')
@@ -291,6 +308,8 @@ export const BracketMatchSlot: React.FC<BracketMatchSlotProps> = ({
         scoreValue={homeScore}
         onScoreChange={setHomeScore}
         scoreAriaLabel={`${match.home.team?.countryName ?? 'Home'} score`}
+        displayScore={hasPublishedScores ? match.homeScore : undefined}
+        isWinner={hasPublishedScores && match.winnerTeamId === match.home.team?.teamId}
       />
       <BracketTeamRow
         slot={match.away}
@@ -303,6 +322,8 @@ export const BracketMatchSlot: React.FC<BracketMatchSlotProps> = ({
         scoreValue={awayScore}
         onScoreChange={setAwayScore}
         scoreAriaLabel={`${match.away.team?.countryName ?? 'Away'} score`}
+        displayScore={hasPublishedScores ? match.awayScore : undefined}
+        isWinner={hasPublishedScores && match.winnerTeamId === match.away.team?.teamId}
       />
     </div>
   )
