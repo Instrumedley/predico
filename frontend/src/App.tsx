@@ -17,6 +17,7 @@ import {
   ForgotPasswordPage,
   ResetPasswordPage,
   AdminPage,
+  AdminKnockoutPage,
   AdminUsersPage,
   NotFoundPage,
   CreateLeaguePage,
@@ -113,6 +114,14 @@ function App() {
             element={
               <AdminRoute>
                 <AdminPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/adm/knockout"
+            element={
+              <AdminRoute>
+                <AdminKnockoutPage />
               </AdminRoute>
             }
           />

@@ -14,6 +14,9 @@ export const AdminSubNav: React.FC = () => {
       <NavLink to="/adm" end className={linkClass}>
         Match Results
       </NavLink>
+      <NavLink to="/adm/knockout" className={linkClass}>
+        Knockout Bracket
+      </NavLink>
       <NavLink to="/adm/users" className={linkClass}>
         User Predictions
       </NavLink>
