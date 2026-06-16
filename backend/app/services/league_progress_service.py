@@ -13,6 +13,7 @@ from app.db.models import Game, Prediction
 from app.db.models.game import GameStatus
 from app.schemas.league import (
     LeagueProgressMatch,
+    LeagueProgressMatchPoint,
     LeagueProgressMatchTeam,
     LeagueProgressMember,
     LeagueProgressResponse,
@@ -44,15 +45,16 @@ async def build_league_progress(
             selectinload(Game.away_team),
         )
         .order_by(
-            Game.match_number.asc().nulls_last(),
-            Game.match_date.asc(),
-            Game.match_time.asc(),
+            Game.match_date.asc().nulls_last(),
+            Game.match_time.asc().nulls_last(),
+            Game.scheduled_at.asc(),
             Game.id.asc(),
         )
     )
     games = games_result.scalars().all()
 
     points_by_user_game: Dict[Tuple[int, int], int] = {}
+    has_prediction_by_user_game: Dict[Tuple[int, int], bool] = {}
     if games:
         game_ids = [game.id for game in games]
         member_ids = [user_id for user_id, _, _, _ in rankings]
@@ -62,10 +64,9 @@ async def build_league_progress(
                 Prediction.game_id.in_(game_ids),
             )
         )
-        points_by_user_game = {
-            (user_id, game_id): int(points or 0)
-            for user_id, game_id, points in predictions_result.all()
-        }
+        for user_id, game_id, points in predictions_result.all():
+            points_by_user_game[(user_id, game_id)] = int(points or 0)
+            has_prediction_by_user_game[(user_id, game_id)] = True
 
     matches: List[LeagueProgressMatch] = []
     for game in games:
@@ -96,9 +97,14 @@ async def build_league_progress(
 
     for rank, user_id, username, total_points, _ in assign_league_ranks(rankings):
         cumulative = [0]
+        match_points: List[LeagueProgressMatchPoint] = []
         for game in games:
-            match_points = points_by_user_game.get((user_id, game.id), 0)
-            cumulative.append(cumulative[-1] + match_points)
+            has_prediction = has_prediction_by_user_game.get((user_id, game.id), False)
+            per_match_points = points_by_user_game.get((user_id, game.id), 0) if has_prediction else 0
+            match_points.append(
+                LeagueProgressMatchPoint(points=per_match_points, has_prediction=has_prediction)
+            )
+            cumulative.append(cumulative[-1] + per_match_points)
 
         members.append(
             LeagueProgressMember(
@@ -109,6 +115,7 @@ async def build_league_progress(
                 is_top_five=user_id in top_five_ids,
                 is_current_user=user_id == current_user_id,
                 points=cumulative,
+                match_points=match_points,
             )
         )
 

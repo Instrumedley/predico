@@ -134,6 +134,11 @@ class LeagueProgressMatch(BaseModel):
     label: str
 
 
+class LeagueProgressMatchPoint(BaseModel):
+    points: int
+    has_prediction: bool
+
+
 class LeagueProgressMember(BaseModel):
     user_id: int
     username: str
@@ -142,6 +147,7 @@ class LeagueProgressMember(BaseModel):
     is_top_five: bool
     is_current_user: bool
     points: List[int]
+    match_points: List[LeagueProgressMatchPoint] = []
 
 
 class LeagueProgressResponse(BaseModel):

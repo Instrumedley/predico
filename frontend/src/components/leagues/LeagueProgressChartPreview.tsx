@@ -1,12 +1,17 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { LeagueProgressResponse } from '@/services/leagues'
 import { LeagueProgressChart } from './LeagueProgressChart'
+import { LeagueProgressMatrix } from './LeagueProgressMatrix'
+import { ProgressViewMode } from './leagueProgressViews'
+
+const PREVIEW_CHART_DURATION_MS = 5000
+const PREVIEW_CROSSFADE_MS = 700
 
 interface LeagueProgressChartPreviewProps {
   isLoading: boolean
   error?: string
   data?: LeagueProgressResponse
-  onExpand: () => void
+  onExpand: (viewMode: ProgressViewMode) => void
 }
 
 export const LeagueProgressChartPreview: React.FC<LeagueProgressChartPreviewProps> = ({
@@ -15,6 +20,23 @@ export const LeagueProgressChartPreview: React.FC<LeagueProgressChartPreviewProp
   data,
   onExpand,
 }) => {
+  const [showMatrix, setShowMatrix] = useState(false)
+
+  useEffect(() => {
+    setShowMatrix(false)
+    if (!data?.has_scored_matches) {
+      return undefined
+    }
+
+    const interval = window.setInterval(() => {
+      setShowMatrix((current) => !current)
+    }, PREVIEW_CHART_DURATION_MS)
+
+    return () => window.clearInterval(interval)
+  }, [data])
+
+  const activeView: ProgressViewMode = showMatrix ? 'matrix' : 'chart'
+
   return (
     <div className="mt-8 overflow-hidden rounded-lg border border-neutral-DEFAULT/20 bg-white shadow-sm">
       <div className="border-b border-neutral-DEFAULT/10 bg-neutral-light px-4 py-3 sm:px-6">
@@ -34,19 +56,35 @@ export const LeagueProgressChartPreview: React.FC<LeagueProgressChartPreviewProp
           <div className="max-w-md text-center">
             <p className="text-sm font-medium text-neutral-DEFAULT">No match results yet</p>
             <p className="mt-2 text-xs text-neutral-DEFAULT/70">
-              The race chart will appear here once the first match is scored.
+              The progress views will appear here once the first match is scored.
             </p>
           </div>
         </div>
       ) : (
         <button
           type="button"
-          onClick={onExpand}
+          onClick={() => onExpand(activeView)}
           className="group relative block w-full cursor-pointer text-left transition-shadow hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-medium focus-visible:ring-offset-2"
-          aria-label="Open league progress chart full screen"
+          aria-label={`Open league progress ${activeView === 'chart' ? 'chart' : 'matrix'} full screen`}
         >
-          <div className="h-[360px] px-2 pb-2 pt-3 sm:px-4 sm:pb-4">
-            <LeagueProgressChart data={data} variant="preview" className="h-full w-full" />
+          <div className="relative h-[360px] px-2 pb-2 pt-3 sm:px-4 sm:pb-4">
+            <div
+              className={`absolute inset-0 px-2 pb-2 pt-3 transition-opacity duration-700 sm:px-4 sm:pb-4 ${
+                showMatrix ? 'pointer-events-none opacity-0' : 'opacity-100'
+              }`}
+              style={{ transitionDuration: `${PREVIEW_CROSSFADE_MS}ms` }}
+            >
+              <LeagueProgressChart data={data} variant="preview" className="h-full w-full" />
+            </div>
+
+            <div
+              className={`absolute inset-0 px-2 pb-2 pt-3 transition-opacity duration-700 sm:px-4 sm:pb-4 ${
+                showMatrix ? 'opacity-100' : 'pointer-events-none opacity-0'
+              }`}
+              style={{ transitionDuration: `${PREVIEW_CROSSFADE_MS}ms` }}
+            >
+              <LeagueProgressMatrix data={data} variant="preview" className="h-full w-full" />
+            </div>
           </div>
 
           <div className="pointer-events-none absolute inset-0 flex items-end justify-end bg-gradient-to-t from-black/10 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100">

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { NavBar } from '@/components/layout'
 import { JoinLeagueModal, LeagueMemberPredictionsModal, LeagueProgressChartModal, LeagueProgressChartPreview } from '@/components/leagues'
+import type { ProgressViewMode } from '@/components/leagues/leagueProgressViews'
 import {
   acceptLeagueInvite,
   getLeagueDetail,
@@ -38,6 +39,7 @@ export const LeagueDetailPage: React.FC = () => {
   const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null)
   const [selectedMemberName, setSelectedMemberName] = useState('')
   const [progressOpen, setProgressOpen] = useState(false)
+  const [progressViewMode, setProgressViewMode] = useState<ProgressViewMode>('chart')
 
   const { data: featureFlags } = useQuery({
     queryKey: ['featureFlags'],
@@ -413,7 +415,10 @@ export const LeagueDetailPage: React.FC = () => {
                       'Failed to load league progress.'
                     : undefined
                 }
-                onExpand={() => setProgressOpen(true)}
+                onExpand={(viewMode) => {
+                  setProgressViewMode(viewMode)
+                  setProgressOpen(true)
+                }}
               />
             )}
 
@@ -561,6 +566,7 @@ export const LeagueDetailPage: React.FC = () => {
             : undefined
         }
         data={leagueProgress}
+        initialViewMode={progressViewMode}
         onClose={() => setProgressOpen(false)}
       />
     </div>

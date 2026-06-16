@@ -66,6 +66,11 @@ export interface LeagueProgressMatch {
   label: string
 }
 
+export interface LeagueProgressMatchPoint {
+  points: number
+  has_prediction: boolean
+}
+
 export interface LeagueProgressMember {
   user_id: number
   username: string
@@ -74,6 +79,7 @@ export interface LeagueProgressMember {
   is_top_five: boolean
   is_current_user: boolean
   points: number[]
+  match_points?: LeagueProgressMatchPoint[]
 }
 
 export interface LeagueProgressResponse {

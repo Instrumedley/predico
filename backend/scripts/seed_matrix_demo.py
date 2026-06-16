@@ -1,22 +1,20 @@
 """
-Seed LOCAL-ONLY demo data for testing the league progress chart.
+Seed LOCAL-ONLY demo data for testing the league progress matrix view.
 
 Creates:
-  - 10 demo users with predictions on the first N finished (simulated) matches
-  - 1 public demo league "[LOCAL CHART DEMO] ..."
-  - Temporarily marks the first N tournament games as FINISHED in the past, then scores them
+  - 10 demo users with predictions on every finished match in the demo window
+  - 1 public demo league "[LOCAL MATRIX DEMO] ..."
+  - Ensures the first N tournament games are FINISHED (only snapshots games it changes)
 
 Safety:
   - Refuses to run on Heroku (DYNO), production/staging ENVIRONMENT, or non-local DATABASE_URL
   - Requires --confirm-local on every run
-  - Snapshots modified games to backend/.chart_demo_snapshot.json and restores on --remove
+  - Snapshots modified games to backend/.matrix_demo_snapshot.json and restores on --remove
 
 Usage (Docker — recommended):
-  docker compose exec backend python scripts/seed_chart_demo.py --confirm-local
-  docker compose exec backend python scripts/seed_chart_demo.py --confirm-local --join-email you@gmail.com
-  docker compose exec backend python scripts/seed_chart_demo.py --confirm-local --remove
-
-Then enable the chart flag locally and open the printed league URL.
+  docker compose exec backend python scripts/seed_matrix_demo.py --confirm-local
+  docker compose exec backend python scripts/seed_matrix_demo.py --confirm-local --join-email you@gmail.com
+  docker compose exec backend python scripts/seed_matrix_demo.py --confirm-local --remove
 """
 from __future__ import annotations
 
@@ -24,7 +22,6 @@ import argparse
 import asyncio
 import json
 import os
-import random
 import secrets
 import sys
 from datetime import date, datetime, time, timedelta
@@ -49,17 +46,19 @@ from app.core.security import get_password_hash
 from app.db.database import AsyncSessionLocal
 from app.db.models import Game, League, LeagueMember, Prediction, User
 from app.db.models.game import GameStatus
-from app.services.scoring_service import score_all_predictions_for_game
+from app.services.scoring_service import calculate_prediction_points, score_all_predictions_for_game
 
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
-SNAPSHOT_PATH = BACKEND_ROOT / ".chart_demo_snapshot.json"
+SNAPSHOT_PATH = BACKEND_ROOT / ".matrix_demo_snapshot.json"
 
-DEMO_LEAGUE_PREFIX = "[LOCAL CHART DEMO]"
-DEMO_EMAIL_PREFIX = "chartdemo+"
+DEMO_LEAGUE_PREFIX = "[LOCAL MATRIX DEMO]"
+DEMO_EMAIL_PREFIX = "matrixdemo+"
 DEMO_EMAIL_SUFFIX = "@local.predico.invalid"
-DEMO_PASSWORD = "chartdemo-local-only"
-DEFAULT_GAME_COUNT = 15
+DEMO_PASSWORD = "matrixdemo-local-only"
+DEFAULT_GAME_COUNT = 20
 DEFAULT_MEMBER_COUNT = 10
+
+MATRIX_POINT_TARGETS = (100, 65, 50, 15, 0)
 
 PRODUCTION_DATABASE_MARKERS = (
     "herokuapp.com",
@@ -70,16 +69,16 @@ PRODUCTION_DATABASE_MARKERS = (
 )
 
 DEMO_USERNAMES = [
-    "ChartAce",
-    "DemoDynamo",
-    "FixtureFan",
-    "GoalGuru",
-    "LineupLeo",
-    "MatchdayMia",
-    "PointsPat",
-    "RaceRafa",
-    "ScoreSara",
-    "TableTom",
+    "MatrixAce",
+    "CellCarla",
+    "GridGabe",
+    "RowRiley",
+    "ColCasey",
+    "MatchMorgan",
+    "PointsPia",
+    "ScoreSky",
+    "TableTess",
+    "ViewVince",
 ]
 
 
@@ -116,10 +115,6 @@ def demo_email(suffix: str) -> str:
     return f"{DEMO_EMAIL_PREFIX}{suffix}{DEMO_EMAIL_SUFFIX}"
 
 
-def is_demo_email(email: str) -> bool:
-    return email.startswith(DEMO_EMAIL_PREFIX) and email.endswith(DEMO_EMAIL_SUFFIX)
-
-
 def game_to_snapshot(game: Game) -> dict[str, Any]:
     return {
         "id": game.id,
@@ -143,6 +138,25 @@ def apply_game_snapshot(game: Game, data: dict[str, Any]) -> None:
     game.scheduled_at = datetime.fromisoformat(data["scheduled_at"]) if data["scheduled_at"] else game.scheduled_at
     game.match_date = date.fromisoformat(data["match_date"]) if data.get("match_date") else game.match_date
     game.match_time = time.fromisoformat(data["match_time"]) if data.get("match_time") else game.match_time
+
+
+def pick_prediction_for_target(
+    actual_home: int,
+    actual_away: int,
+    target_points: int,
+) -> tuple[int, int]:
+    for predicted_home in range(0, 6):
+        for predicted_away in range(0, 6):
+            points, _ = calculate_prediction_points(
+                predicted_home,
+                predicted_away,
+                actual_home,
+                actual_away,
+            )
+            if points == target_points:
+                return predicted_home, predicted_away
+
+    return (actual_home, actual_away) if target_points == 100 else (0, 3)
 
 
 async def load_first_games(db, count: int) -> list[Game]:
@@ -183,7 +197,7 @@ async def remove_demo_data(db) -> None:
         demo_league = await get_demo_league(db)
         demo_users = await get_demo_users(db)
         if not demo_league and not demo_users:
-            print("No chart demo data found.")
+            print("No matrix demo data found.")
             return
         print("WARNING: Snapshot file missing; will remove demo users/league but cannot restore games.")
 
@@ -222,34 +236,49 @@ async def remove_demo_data(db) -> None:
     if SNAPSHOT_PATH.exists():
         SNAPSHOT_PATH.unlink()
 
-    print("Removed chart demo league/users and restored modified games.")
+    print("Removed matrix demo league/users and restored modified games.")
 
 
 async def seed_demo_data(db, *, game_count: int, join_email: str | None) -> None:
     if SNAPSHOT_PATH.exists():
-        print("Chart demo snapshot already exists. Run with --remove first, or use --force to recreate.")
+        print("Matrix demo snapshot already exists. Run with --remove first, or use --force to recreate.")
         sys.exit(1)
 
     existing = await get_demo_league(db)
     if existing:
-        print("Demo league already exists. Run with --remove first.")
+        print("Matrix demo league already exists. Run with --remove first.")
         sys.exit(1)
 
     games = await load_first_games(db, game_count)
-    snapshot = {"game_ids": [game.id for game in games], "games": [game_to_snapshot(game) for game in games]}
-    SNAPSHOT_PATH.write_text(json.dumps(snapshot, indent=2), encoding="utf-8")
-
+    modified_snapshots: list[dict[str, Any]] = []
     base_day = datetime.utcnow() - timedelta(days=game_count + 3)
+
     for index, game in enumerate(games):
+        if game.status != GameStatus.FINISHED:
+            modified_snapshots.append(game_to_snapshot(game))
+
         kickoff = base_day + timedelta(days=index, hours=18)
         game.status = GameStatus.FINISHED
-        game.home_score = random.randint(0, 3)
-        game.away_score = random.randint(0, 3)
+        if game.home_score is None or game.away_score is None:
+            game.home_score = (index + 1) % 4
+            game.away_score = index % 3
         game.home_penalty_score = None
         game.away_penalty_score = None
         game.scheduled_at = kickoff
         game.match_date = kickoff.date()
         game.match_time = time(kickoff.hour, kickoff.minute)
+
+    if modified_snapshots:
+        SNAPSHOT_PATH.write_text(
+            json.dumps(
+                {
+                    "game_ids": [item["id"] for item in modified_snapshots],
+                    "games": modified_snapshots,
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
 
     password_hash = get_password_hash(DEMO_PASSWORD)
     demo_users: list[User] = []
@@ -275,8 +304,8 @@ async def seed_demo_data(db, *, game_count: int, join_email: str | None) -> None
 
     creator = demo_users[0]
     league = League(
-        name=f"{DEMO_LEAGUE_PREFIX} Progress chart test league",
-        description="Local-only demo data for chart testing. Safe to delete with seed_chart_demo.py --remove.",
+        name=f"{DEMO_LEAGUE_PREFIX} Progress matrix test league",
+        description="Local-only demo data for matrix progress testing. Safe to delete with seed_matrix_demo.py --remove.",
         created_by=creator.id,
         is_private=False,
         invite_code=None,
@@ -296,18 +325,40 @@ async def seed_demo_data(db, *, game_count: int, join_email: str | None) -> None
     for member in member_users:
         db.add(LeagueMember(league_id=league.id, user_id=member.id, total_points=0))
 
-    for member in member_users:
-        for game in games:
-            db.add(
-                Prediction(
-                    user_id=member.id,
-                    game_id=game.id,
-                    predicted_home_score=random.randint(0, 3),
-                    predicted_away_score=random.randint(0, 3),
-                    points=0,
-                    is_calculated=False,
+    for member_index, member in enumerate(member_users):
+        for game_index, game in enumerate(games):
+            target_points = MATRIX_POINT_TARGETS[(member_index + game_index) % len(MATRIX_POINT_TARGETS)]
+            predicted_home, predicted_away = pick_prediction_for_target(
+                game.home_score or 0,
+                game.away_score or 0,
+                target_points,
+            )
+            existing_result = await db.execute(
+                select(Prediction).where(
+                    Prediction.user_id == member.id,
+                    Prediction.game_id == game.id,
                 )
             )
+            existing = existing_result.scalar_one_or_none()
+            if existing:
+                existing.predicted_home_score = predicted_home
+                existing.predicted_away_score = predicted_away
+                existing.points = 0
+                existing.exact_score_points = 0
+                existing.correct_result_points = 0
+                existing.correct_goal_difference_points = 0
+                existing.is_calculated = False
+            else:
+                db.add(
+                    Prediction(
+                        user_id=member.id,
+                        game_id=game.id,
+                        predicted_home_score=predicted_home,
+                        predicted_away_score=predicted_away,
+                        points=0,
+                        is_calculated=False,
+                    )
+                )
 
     await db.flush()
 
@@ -323,23 +374,23 @@ async def seed_demo_data(db, *, game_count: int, join_email: str | None) -> None
     await db.commit()
 
     print("")
-    print("Chart demo seeded successfully (LOCAL ONLY).")
+    print("Matrix demo seeded successfully (LOCAL ONLY).")
     print(f"  League name: {league.name}")
     print(f"  League URL:  /leagues/{league.public_id}")
     print(f"  Members:     {len(member_users)} (demo password for fake users: {DEMO_PASSWORD})")
-    print(f"  Matches:     first {game_count} games marked FINISHED with past kickoffs")
+    print(f"  Matches:     first {game_count} games scored; every member has a prediction on each")
     print("")
     print("Next steps:")
     print("  1. Enable chart flag: docker compose exec backend python scripts/feature_flags.py league-progress-chart on")
     print("  2. docker compose restart backend")
-    print("  3. Open the league URL above and click 'Open progress chart'")
+    print("  3. Open the league URL above and watch the progress preview rotate to the matrix")
     print("")
     print("To undo everything:")
-    print("  docker compose exec backend python scripts/seed_chart_demo.py --confirm-local --remove")
+    print("  docker compose exec backend python scripts/seed_matrix_demo.py --confirm-local --remove")
 
 
 async def main() -> None:
-    parser = argparse.ArgumentParser(description="Seed or remove LOCAL-ONLY league chart demo data.")
+    parser = argparse.ArgumentParser(description="Seed or remove LOCAL-ONLY league matrix demo data.")
     parser.add_argument(
         "--confirm-local",
         action="store_true",
@@ -354,7 +405,7 @@ async def main() -> None:
         "--games",
         type=int,
         default=DEFAULT_GAME_COUNT,
-        help=f"Number of opening matches to simulate (default {DEFAULT_GAME_COUNT}).",
+        help=f"Number of opening matches to include (default {DEFAULT_GAME_COUNT}).",
     )
     parser.add_argument(
         "--join-email",

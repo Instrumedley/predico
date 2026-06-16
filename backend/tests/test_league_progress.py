@@ -82,5 +82,13 @@ async def test_build_league_progress_cumulative_points():
 
     assert alice.points == [0, 100, 150]
     assert bob.points == [0, 50, 50]
+    assert alice.match_points[0].points == 100
+    assert alice.match_points[0].has_prediction is True
+    assert alice.match_points[1].points == 50
+    assert alice.match_points[1].has_prediction is True
+    assert bob.match_points[0].points == 50
+    assert bob.match_points[0].has_prediction is True
+    assert bob.match_points[1].points == 0
+    assert bob.match_points[1].has_prediction is True
     assert alice.is_top_five is True
     assert bob.is_current_user is True
