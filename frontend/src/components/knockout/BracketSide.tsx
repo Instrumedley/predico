@@ -3,7 +3,7 @@ import { BracketMatch, BracketSideData, KnockoutSavePayload } from '@/types/knoc
 import {
   BRACKET_CENTER_HUB_INSET,
   BRACKET_ROUND_GAP,
-  BRACKET_TRACK_HEIGHT,
+  BRACKET_TRACK_MIN_HEIGHT,
   BracketConnector,
   BracketMatchSlot,
   BracketRoundColumn,
@@ -33,7 +33,7 @@ export const BracketOuterRounds: React.FC<BracketOuterRoundsProps> = ({
   const rounds = direction === 'left' ? OUTER_ROUNDS : [...OUTER_ROUNDS].reverse()
 
   return (
-    <div className={`flex shrink-0 items-start ${BRACKET_ROUND_GAP}`}>
+    <div className={`flex shrink-0 items-stretch ${BRACKET_ROUND_GAP}`}>
       {rounds.map((round, index) => (
         <React.Fragment key={round.key}>
           <BracketRoundColumn
@@ -68,24 +68,25 @@ export const BracketCenterHub: React.FC<BracketCenterHubProps> = ({
   onSaveMatch,
 }) => (
   <div
-    className={`flex shrink-0 items-start border-x border-neutral-DEFAULT/10 ${BRACKET_ROUND_GAP} ${BRACKET_CENTER_HUB_INSET}`}
+    className={`flex shrink-0 items-stretch border-x border-neutral-DEFAULT/10 ${BRACKET_ROUND_GAP} ${BRACKET_CENTER_HUB_INSET}`}
   >
     <BracketRoundColumn
       label="SF"
       matches={[leftSemiFinal]}
       size="md"
-      singleMatch
       admin={admin}
       savingMatchNumber={savingMatchNumber}
       onSaveMatch={onSaveMatch}
     />
     <BracketConnector direction="left" />
 
-    <div className="flex w-[11rem] shrink-0 flex-col items-stretch">
+    <div className="flex w-[11rem] shrink-0 flex-col self-stretch">
       <span className="mb-2 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-primary-medium">
         Final
       </span>
-      <div className={`flex ${BRACKET_TRACK_HEIGHT} flex-col items-center justify-center gap-3 py-1`}>
+      <div
+        className={`flex flex-1 flex-col items-center justify-center gap-3 py-1 ${BRACKET_TRACK_MIN_HEIGHT}`}
+      >
         <BracketMatchSlot
           match={final}
           size="lg"
@@ -114,7 +115,6 @@ export const BracketCenterHub: React.FC<BracketCenterHubProps> = ({
       label="SF"
       matches={[rightSemiFinal]}
       size="md"
-      singleMatch
       admin={admin}
       savingMatchNumber={savingMatchNumber}
       onSaveMatch={onSaveMatch}
