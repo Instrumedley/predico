@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { NavBar, MiniMenu, DeadlineCard, type MenuOption } from '@/components/layout'
+import { NavBar, MiniMenu, DeadlineCard, UpdateNewsBanner, type MenuOption } from '@/components/layout'
 import { GroupStandingsComponent } from '@/components/standings'
 import { NextMatch, LatestResults } from '@/components/matches'
 import { DashboardStageTabs, KnockoutBracket, type DashboardStage } from '@/components/knockout'
@@ -20,6 +20,7 @@ export const DashboardPage: React.FC = () => {
   })
 
   const knockoutStageEnabled = featureFlags?.knockout_stage ?? false
+  const newsBannerEnabled = featureFlags?.dashboard_news_banner ?? false
 
   useEffect(() => {
     if (defaultStageApplied.current || !featureFlags?.knockout_stage) {
@@ -45,6 +46,8 @@ export const DashboardPage: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <MiniMenu activeOption={activeMenuOption} onOptionChange={handleMenuOptionChange} />
+
+        {newsBannerEnabled && <UpdateNewsBanner />}
 
         <DeadlineCard />
 

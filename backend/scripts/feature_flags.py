@@ -12,6 +12,10 @@ Usage (local — updates backend/.env):
   python scripts/feature_flags.py knockout-stage off
   python scripts/feature_flags.py knockout-stage status
 
+  python scripts/feature_flags.py dashboard-news-banner on
+  python scripts/feature_flags.py dashboard-news-banner off
+  python scripts/feature_flags.py dashboard-news-banner status
+
 Usage (Heroku — prints the command to run):
   python scripts/feature_flags.py league-progress-chart on --heroku predico-api
   python scripts/feature_flags.py knockout-stage on --default true --heroku predico-api
@@ -33,6 +37,9 @@ FLAG_DEFINITIONS = {
     "knockout-stage": {
         "enabled": "KNOCKOUT_STAGE_ENABLED",
         "default": "KNOCKOUT_STAGE_DEFAULT",
+    },
+    "dashboard-news-banner": {
+        "enabled": "DASHBOARD_NEWS_BANNER_ENABLED",
     },
 }
 

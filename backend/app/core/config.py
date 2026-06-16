@@ -141,6 +141,7 @@ class Settings(BaseSettings):
     LEAGUE_PROGRESS_CHART_ENABLED: bool = False
     KNOCKOUT_STAGE_ENABLED: bool = False
     KNOCKOUT_STAGE_DEFAULT: bool = False
+    DASHBOARD_NEWS_BANNER_ENABLED: bool = False
 
     # Cloudflare
     CLOUDFLARE_ZONE_ID: Optional[str] = None

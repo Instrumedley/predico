@@ -7,6 +7,7 @@ export interface FeatureFlags {
   league_progress_chart: boolean
   knockout_stage: boolean
   knockout_stage_default: boolean
+  dashboard_news_banner: boolean
 }
 
 export async function getFeatureFlags(): Promise<FeatureFlags> {

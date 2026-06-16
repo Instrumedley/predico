@@ -13,6 +13,7 @@ class FeatureFlagsResponse(BaseModel):
     league_progress_chart: bool
     knockout_stage: bool
     knockout_stage_default: bool
+    dashboard_news_banner: bool
 
 
 @router.get("/features", response_model=FeatureFlagsResponse)
@@ -22,4 +23,5 @@ async def get_feature_flags() -> FeatureFlagsResponse:
         league_progress_chart=settings.LEAGUE_PROGRESS_CHART_ENABLED,
         knockout_stage=settings.KNOCKOUT_STAGE_ENABLED,
         knockout_stage_default=settings.KNOCKOUT_STAGE_DEFAULT,
+        dashboard_news_banner=settings.DASHBOARD_NEWS_BANNER_ENABLED,
     )
