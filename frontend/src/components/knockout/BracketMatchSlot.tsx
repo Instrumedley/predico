@@ -5,10 +5,60 @@ import { abbreviateCountryName } from '@/utils/countryNames'
 import type { KnockoutSavePayload } from '@/types/knockout'
 import { useModal } from '@/contexts/ModalContext'
 
-export const BRACKET_TRACK_HEIGHT = 'h-[34rem] sm:h-[36rem]'
+export const BRACKET_TRACK_MIN_HEIGHT = 'min-h-[34rem] sm:min-h-[36rem]'
 export const BRACKET_ROUND_GAP = 'gap-2'
+/** Tight vertical spacing between the two teams in one match. */
+export const BRACKET_MATCH_PAIR_GAP = 'gap-1.5'
+/** R32 matches per side; outer-round columns share one grid with gap rows between matches. */
+export const BRACKET_SIDE_LEAF_MATCHES = 8
+const BRACKET_MATCH_CONTENT_ROWS = 2
+export const BRACKET_MATCH_GAP_MIN = '1rem'
+export const BRACKET_TRACK_GRID_ROW_COUNT =
+  BRACKET_SIDE_LEAF_MATCHES * BRACKET_MATCH_CONTENT_ROWS + (BRACKET_SIDE_LEAF_MATCHES - 1)
 /** Extra inset so SF match rows don't sit flush against bracket connectors. */
 export const BRACKET_CENTER_HUB_INSET = 'px-1.5'
+export const BRACKET_ROUND_LABEL_CLASS =
+  'mb-2 text-center text-[10px] font-semibold uppercase tracking-wide text-neutral-DEFAULT/60'
+
+/** 2 team rows + 1rem gap row between each R32 match pair. */
+export const buildBracketGridTemplateRows = (): string => {
+  const parts: string[] = []
+  for (let i = 0; i < BRACKET_SIDE_LEAF_MATCHES; i++) {
+    parts.push('minmax(0, 2fr)', 'minmax(0, 2fr)')
+    if (i < BRACKET_SIDE_LEAF_MATCHES - 1) {
+      parts.push(`minmax(${BRACKET_MATCH_GAP_MIN}, 1fr)`)
+    }
+  }
+  return parts.join(' ')
+}
+
+const getLeafMatchRowRange = (leafMatchIndex: number): { start: number; end: number } => {
+  const start = leafMatchIndex * 3 + 1
+  return { start, end: start + 1 }
+}
+
+/** Inclusive 1-based grid row span covered by a match and its feeders down to R32. */
+export const getMatchRowRange = (
+  matchIndex: number,
+  matchCount: number
+): { start: number; end: number } => {
+  if (matchCount >= BRACKET_SIDE_LEAF_MATCHES) {
+    return getLeafMatchRowRange(matchIndex)
+  }
+
+  const childCount = matchCount * 2
+  const rangeA = getMatchRowRange(matchIndex * 2, childCount)
+  const rangeB = getMatchRowRange(matchIndex * 2 + 1, childCount)
+  return { start: rangeA.start, end: rangeB.end }
+}
+
+/** Grid row placement: tight 2-row match block centered on feeder midpoint. */
+export const getBracketMatchGridRow = (matchIndex: number, matchCount: number): string => {
+  const { start, end } = getMatchRowRange(matchIndex, matchCount)
+  const center = (start + end) / 2
+  const rowStart = Math.round(center - 1)
+  return `${rowStart} / span 2`
+}
 
 interface BracketMatchSlotProps {
   match: BracketMatch
@@ -295,7 +345,7 @@ export const BracketMatchSlot: React.FC<BracketMatchSlotProps> = ({
 
   return (
     <div
-      className={`flex flex-col gap-1.5 ${SLOT_WIDTHS[size]} ${saving ? 'opacity-60' : ''}`}
+      className={`flex flex-none flex-col ${BRACKET_MATCH_PAIR_GAP} ${SLOT_WIDTHS[size]} ${saving ? 'opacity-60' : ''}`}
     >
       <BracketTeamRow
         slot={match.home}
@@ -333,7 +383,6 @@ interface BracketRoundColumnProps {
   label: string
   matches: BracketMatch[]
   size?: 'sm' | 'md' | 'lg'
-  singleMatch?: boolean
   admin?: boolean
   savingMatchNumber?: number | null
   onSaveMatch?: (payload: KnockoutSavePayload) => void | Promise<void>
@@ -343,33 +392,38 @@ export const BracketRoundColumn: React.FC<BracketRoundColumnProps> = ({
   label,
   matches,
   size = 'sm',
-  singleMatch = false,
   admin = false,
   savingMatchNumber = null,
   onSaveMatch,
 }) => (
-  <div className={`flex shrink-0 flex-col items-stretch ${SLOT_WIDTHS[size]}`}>
-    <span className="mb-2 text-center text-[10px] font-semibold uppercase tracking-wide text-neutral-DEFAULT/60">
-      {label}
-    </span>
+  <div className={`flex shrink-0 flex-col items-stretch self-stretch ${SLOT_WIDTHS[size]}`}>
+    <span className={BRACKET_ROUND_LABEL_CLASS}>{label}</span>
     <div
-      className={`flex ${BRACKET_TRACK_HEIGHT} flex-col py-1 ${
-        singleMatch ? 'justify-center' : 'justify-around'
-      }`}
+      className={`grid flex-1 py-1 ${BRACKET_TRACK_MIN_HEIGHT}`}
+      style={{ gridTemplateRows: buildBracketGridTemplateRows() }}
     >
-      {matches.map((match) => (
-        <BracketMatchSlot
+      {matches.map((match, index) => (
+        <div
           key={match.matchNumber}
-          match={match}
-          size={size}
-          admin={admin}
-          saving={savingMatchNumber === match.matchNumber}
-          onSave={
-            onSaveMatch
-              ? (payload) => onSaveMatch({ ...payload, matchNumber: match.matchNumber })
-              : undefined
-          }
-        />
+          className={`flex min-h-0 flex-col ${
+            matches.length >= BRACKET_SIDE_LEAF_MATCHES
+              ? 'h-full justify-start'
+              : 'justify-center'
+          }`}
+          style={{ gridRow: getBracketMatchGridRow(index, matches.length) }}
+        >
+          <BracketMatchSlot
+            match={match}
+            size={size}
+            admin={admin}
+            saving={savingMatchNumber === match.matchNumber}
+            onSave={
+              onSaveMatch
+                ? (payload) => onSaveMatch({ ...payload, matchNumber: match.matchNumber })
+                : undefined
+            }
+          />
+        </div>
       ))}
     </div>
   </div>
@@ -380,13 +434,16 @@ interface BracketConnectorProps {
 }
 
 export const BracketConnector: React.FC<BracketConnectorProps> = ({ direction }) => (
-  <div className="relative hidden w-8 shrink-0 self-stretch sm:block" aria-hidden="true">
-    <div
-      className={`absolute inset-y-[8%] w-1/2 border-primary-medium/25 ${
-        direction === 'left'
-          ? 'right-0 rounded-r-md border-r border-t border-b'
-          : 'left-0 rounded-l-md border-l border-t border-b'
-      }`}
-    />
+  <div className="hidden w-8 shrink-0 flex-col self-stretch sm:flex" aria-hidden="true">
+    <span className={`${BRACKET_ROUND_LABEL_CLASS} shrink-0 invisible`}>&nbsp;</span>
+    <div className={`relative flex-1 ${BRACKET_TRACK_MIN_HEIGHT} w-full`}>
+      <div
+        className={`absolute inset-0 w-1/2 border-primary-medium/25 ${
+          direction === 'left'
+            ? 'right-0 rounded-r-md border-r border-t border-b'
+            : 'left-0 rounded-l-md border-l border-t border-b'
+        }`}
+      />
+    </div>
   </div>
 )
