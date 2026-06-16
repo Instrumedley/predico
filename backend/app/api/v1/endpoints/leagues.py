@@ -40,6 +40,7 @@ from app.services.league_service import (
     accept_pending_invites_for_user,
     create_or_refresh_league_invitation,
     get_invitation_by_token,
+    assign_league_ranks,
     get_league_rankings,
 )
 
@@ -183,25 +184,16 @@ def _prediction_to_league_member_prediction(prediction: Prediction) -> LeagueMem
 
 async def _build_rankings(db: AsyncSession, league_id: int) -> List[LeagueMemberRanking]:
     rows = await get_league_rankings(db, league_id)
-    rankings: List[LeagueMemberRanking] = []
-    previous_points: Optional[int] = None
-    current_rank = 0
-
-    for index, (user_id, username, points, perfect_predictions) in enumerate(rows, start=1):
-        if previous_points is None or points != previous_points:
-            current_rank = index
-        rankings.append(
-            LeagueMemberRanking(
-                rank=current_rank,
-                user_id=user_id,
-                username=username,
-                total_points=points,
-                perfect_predictions=perfect_predictions,
-            )
+    return [
+        LeagueMemberRanking(
+            rank=rank,
+            user_id=user_id,
+            username=username,
+            total_points=points,
+            perfect_predictions=perfect_predictions,
         )
-        previous_points = points
-
-    return rankings
+        for rank, user_id, username, points, perfect_predictions in assign_league_ranks(rows)
+    ]
 
 
 async def _build_league_detail(

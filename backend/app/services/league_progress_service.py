@@ -17,7 +17,7 @@ from app.schemas.league import (
     LeagueProgressMember,
     LeagueProgressResponse,
 )
-from app.services.league_service import get_league_rankings
+from app.services.league_service import assign_league_ranks, get_league_rankings
 
 
 def _match_label(home_code: str, away_code: str) -> str:
@@ -93,13 +93,8 @@ async def build_league_progress(
         )
 
     members: List[LeagueProgressMember] = []
-    previous_points: int | None = None
-    current_rank = 0
 
-    for index, (user_id, username, total_points, _) in enumerate(rankings, start=1):
-        if previous_points is None or total_points != previous_points:
-            current_rank = index
-
+    for rank, user_id, username, total_points, _ in assign_league_ranks(rankings):
         cumulative = [0]
         for game in games:
             match_points = points_by_user_game.get((user_id, game.id), 0)
@@ -109,14 +104,13 @@ async def build_league_progress(
             LeagueProgressMember(
                 user_id=user_id,
                 username=username,
-                rank=current_rank,
+                rank=rank,
                 total_points=total_points,
                 is_top_five=user_id in top_five_ids,
                 is_current_user=user_id == current_user_id,
                 points=cumulative,
             )
         )
-        previous_points = total_points
 
     return LeagueProgressResponse(
         matches=matches,

@@ -169,6 +169,11 @@ export const FaqPage: React.FC = () => {
                 based on overall prediction performance.
               </p>
               <p>
+                If two players have the same total score, the higher rank goes to whoever has more{' '}
+                <strong>perfect predictions</strong> (exact scores worth 100 points). This tie-break applies
+                at every position in the table.
+              </p>
+              <p>
                 Points are calculated automatically after a match is marked finished and the official score is
                 entered. Until then, that game contributes 0 points to your total.
               </p>

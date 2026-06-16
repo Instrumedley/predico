@@ -12,11 +12,34 @@ from app.services.token_service import TokenService
 
 INVITE_EXPIRY_DAYS = 30
 
+LeagueRankingRow = Tuple[int, str, int, int]
 
-async def get_league_rankings(db: AsyncSession, league_id: int) -> List[Tuple[int, str, int, int]]:
+
+def assign_league_ranks(rows: List[LeagueRankingRow]) -> List[Tuple[int, int, str, int, int]]:
+    """
+    Assign ranks to pre-sorted league rows.
+
+    Rows must be ordered by total_points desc, perfect_predictions desc, username asc.
+    Players with the same points and perfect predictions share a rank.
+    """
+    ranked: List[Tuple[int, int, str, int, int]] = []
+    previous_key: Tuple[int, int] | None = None
+    current_rank = 0
+
+    for index, (user_id, username, points, perfect_predictions) in enumerate(rows, start=1):
+        key = (points, perfect_predictions)
+        if previous_key is None or key != previous_key:
+            current_rank = index
+        ranked.append((current_rank, user_id, username, points, perfect_predictions))
+        previous_key = key
+
+    return ranked
+
+
+async def get_league_rankings(db: AsyncSession, league_id: int) -> List[LeagueRankingRow]:
     """
     Return league standings as (user_id, username, total_points, perfect_predictions)
-    sorted by points desc, then username asc.
+    sorted by points desc, perfect predictions desc, then username asc.
     """
     points_subquery = (
         select(
@@ -48,7 +71,11 @@ async def get_league_rankings(db: AsyncSession, league_id: int) -> List[Tuple[in
         .outerjoin(points_subquery, points_subquery.c.user_id == User.id)
         .outerjoin(perfect_subquery, perfect_subquery.c.user_id == User.id)
         .where(LeagueMember.league_id == league_id)
-        .order_by(func.coalesce(points_subquery.c.total_points, 0).desc(), User.username.asc())
+        .order_by(
+            func.coalesce(points_subquery.c.total_points, 0).desc(),
+            func.coalesce(perfect_subquery.c.perfect_predictions, 0).desc(),
+            User.username.asc(),
+        )
     )
 
     return [
