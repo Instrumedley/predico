@@ -198,16 +198,16 @@ GROUP_STAGE_MATCHES = [
     ('K', 'Uzbekistan', 'Colombia', date(2026, 6, 16), 'Matchday 1'),
     ('K', 'DR Congo', 'Colombia', date(2026, 6, 24), 'Matchday 2'),
     ('K', 'Portugal', 'Uzbekistan', date(2026, 6, 24), 'Matchday 2'),
-    ('K', 'Colombia', 'Portugal', date(2026, 7, 1), 'Matchday 3'),
-    ('K', 'DR Congo', 'Uzbekistan', date(2026, 7, 1), 'Matchday 3'),
+    ('K', 'Colombia', 'Portugal', date(2026, 6, 27), 'Matchday 3'),
+    ('K', 'DR Congo', 'Uzbekistan', date(2026, 6, 27), 'Matchday 3'),
     
     # Group L
     ('L', 'England', 'Croatia', date(2026, 6, 16), 'Matchday 1'),
     ('L', 'Ghana', 'Panama', date(2026, 6, 16), 'Matchday 1'),
     ('L', 'Croatia', 'Panama', date(2026, 6, 25), 'Matchday 2'),
     ('L', 'England', 'Ghana', date(2026, 6, 25), 'Matchday 2'),
-    ('L', 'Panama', 'England', date(2026, 7, 1), 'Matchday 3'),
-    ('L', 'Croatia', 'Ghana', date(2026, 7, 1), 'Matchday 3'),
+    ('L', 'Panama', 'England', date(2026, 6, 27), 'Matchday 3'),
+    ('L', 'Croatia', 'Ghana', date(2026, 6, 27), 'Matchday 3'),
 ]
 
 

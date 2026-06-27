@@ -87,15 +87,15 @@ FIFA_GROUP_STAGE_KICKOFFS = [
     ("Uzbekistan", "Colombia", date(2026, 6, 18), 2, 0, -6),
     ("DR Congo", "Colombia", date(2026, 6, 24), 2, 0, -6),
     ("Portugal", "Uzbekistan", date(2026, 6, 24), 17, 0, -5),
-    ("Colombia", "Portugal", date(2026, 6, 27), 23, 30, -4),
-    ("DR Congo", "Uzbekistan", date(2026, 6, 27), 23, 30, -4),
+    ("Colombia", "Portugal", date(2026, 6, 27), 19, 30, -4),
+    ("DR Congo", "Uzbekistan", date(2026, 6, 27), 19, 30, -4),
     # Group L
     ("England", "Croatia", date(2026, 6, 17), 20, 0, -5),
     ("Ghana", "Panama", date(2026, 6, 17), 23, 0, -4),
     ("Croatia", "Panama", date(2026, 6, 23), 23, 0, -4),
     ("England", "Ghana", date(2026, 6, 23), 20, 0, -4),
-    ("Panama", "England", date(2026, 6, 27), 21, 0, -4),
-    ("Croatia", "Ghana", date(2026, 6, 27), 21, 0, -4),
+    ("Panama", "England", date(2026, 6, 27), 17, 0, -4),
+    ("Croatia", "Ghana", date(2026, 6, 27), 17, 0, -4),
 ]
 # fmt: on
 
