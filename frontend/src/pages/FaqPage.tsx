@@ -202,11 +202,6 @@ export const FaqPage: React.FC = () => {
                 if the match is 1–1 after 90 minutes and Team A wins on penalties, the result used for scoring
                 is <strong>1–1</strong>, not the shootout outcome.
               </p>
-              <p>
-                In admin, the knockout winner (who advances) can still be recorded separately when a match is
-                decided after extra time or on penalties — that is for the bracket only and does not affect how
-                your prediction is scored.
-              </p>
             </div>
           </section>
 
