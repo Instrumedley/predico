@@ -12,15 +12,15 @@ export const UpdateNewsBanner: React.FC = () => {
       {DASHBOARD_NEWS_ITEMS.map((item) => (
         <div
           key={item.id}
-          className="rounded-lg border border-[#B31B1B]/20 px-4 py-3 shadow-sm"
-          style={{ backgroundColor: '#FFE4E1', color: '#B31B1B' }}
+          className="rounded-lg border border-orange-500/30 bg-white px-4 py-3 shadow-sm"
+          style={{ color: '#EA580C' }}
           role="status"
           aria-live="polite"
         >
           <div className="flex gap-3">
             <div
-              className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#B31B1B]/10"
-              style={{ color: '#B31B1B' }}
+              className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-500/10"
+              style={{ color: '#EA580C' }}
               aria-hidden="true"
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -34,15 +34,12 @@ export const UpdateNewsBanner: React.FC = () => {
             </div>
 
             <div className="min-w-0 flex-1 text-sm leading-relaxed">
-              <p>
-                <span className="font-semibold">Update: </span>
-                {item.message}
-              </p>
+              <p className="font-medium">{item.message}</p>
               {item.link && (
                 <Link
                   to={item.link.href}
                   className="mt-1 inline-block font-medium underline-offset-2 hover:underline"
-                  style={{ color: '#B31B1B' }}
+                  style={{ color: '#EA580C' }}
                 >
                   {item.link.label}
                 </Link>
