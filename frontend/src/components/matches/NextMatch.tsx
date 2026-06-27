@@ -31,7 +31,7 @@ const NextMatchPredictionStatus: React.FC<NextMatchPredictionStatusProps> = ({
       <div className={`flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-neutral-DEFAULT/80 ${alignmentClass}`}>
         <span className="font-medium text-neutral-DEFAULT/70">Your prediction:</span>
         <span
-          className={`fi fi-${getCountryCodeForFlag(match.homeTeam.countryCode)} fis`}
+          className={`fi fi-${getCountryCodeForFlag(match.homeTeam!.countryCode)} fis`}
           style={{ fontSize: '0.875rem' }}
           aria-hidden="true"
         />
@@ -39,7 +39,7 @@ const NextMatchPredictionStatus: React.FC<NextMatchPredictionStatusProps> = ({
           {prediction.predictedHomeScore} - {prediction.predictedAwayScore}
         </span>
         <span
-          className={`fi fi-${getCountryCodeForFlag(match.awayTeam.countryCode)} fis`}
+          className={`fi fi-${getCountryCodeForFlag(match.awayTeam!.countryCode)} fis`}
           style={{ fontSize: '0.875rem' }}
           aria-hidden="true"
         />
@@ -185,11 +185,11 @@ export const NextMatch: React.FC<NextMatchProps> = ({ data: propData }) => {
                 {/* Home Team */}
                 <div className="flex-1 flex items-center space-x-2">
                   <span
-                    className={`fi fi-${getCountryCodeForFlag(match.homeTeam.countryCode)} fis`}
+                    className={`fi fi-${getCountryCodeForFlag(match.homeTeam!.countryCode)} fis`}
                     style={{ fontSize: '1.5rem' }}
                   ></span>
                   <span className="text-sm font-medium text-neutral-DEFAULT">
-                    {abbreviateCountryName(match.homeTeam.name)}
+                    {abbreviateCountryName(match.homeTeam!.name)}
                   </span>
                 </div>
 
@@ -199,10 +199,10 @@ export const NextMatch: React.FC<NextMatchProps> = ({ data: propData }) => {
                 {/* Away Team */}
                 <div className="flex-1 flex items-center space-x-2 justify-end">
                   <span className="text-sm font-medium text-neutral-DEFAULT">
-                    {abbreviateCountryName(match.awayTeam.name)}
+                    {abbreviateCountryName(match.awayTeam!.name)}
                   </span>
                   <span
-                    className={`fi fi-${getCountryCodeForFlag(match.awayTeam.countryCode)} fis`}
+                    className={`fi fi-${getCountryCodeForFlag(match.awayTeam!.countryCode)} fis`}
                     style={{ fontSize: '1.5rem' }}
                   ></span>
                 </div>

@@ -181,18 +181,24 @@ def _resolve_slot(context: _BuildContext, match_def: BracketMatchDef, slot: Brac
         return _resolve_best_third_slot(context, slot, match_def)
     if slot.kind in {"match_winner", "match_loser"}:
         source_match = slot.source_match
-        if not source_match or source_match not in context.resolved_matches:
+        if not source_match:
             return _empty_slot()
+
+        prefix = "Winner" if slot.kind == "match_winner" else "Loser"
+        label = f"{prefix} Match {source_match}"
+
+        if source_match not in context.resolved_matches:
+            return _slot_with_label(label)
 
         source = context.resolved_matches[source_match]
         result = context.results_by_match.get(source_match)
         if not result or not result.winner_team_id:
-            return _empty_slot()
+            return _slot_with_label(label)
 
         home_team = source.home.team
         away_team = source.away.team
         if not home_team or not away_team:
-            return _empty_slot()
+            return _slot_with_label(label)
 
         if slot.kind == "match_winner":
             winner = home_team if result.winner_team_id == home_team.team_id else away_team
@@ -226,19 +232,17 @@ def _build_match(context: _BuildContext, match_number: int) -> ResolvedMatch:
     return resolved
 
 
-async def build_knockout_bracket(db: AsyncSession) -> KnockoutBracketResponse:
+async def _build_knockout_context(db: AsyncSession) -> _BuildContext:
     standings_by_group = await load_group_standings(db)
     results_by_match = await load_knockout_results(db)
 
     ranked_third = rank_third_place_teams(standings_by_group)
     qualifying_third_groups: set[str] = set()
     third_place_assignments: dict[str, str] | None = None
-    combination_key: str | None = None
 
     if len(ranked_third) == 12:
         top_eight = ranked_third[:8]
         qualifying_third_groups = {group_letter for group_letter, _ in top_eight}
-        combination_key = "".join(sorted(qualifying_third_groups))
         third_place_assignments = lookup_third_place_assignments(qualifying_third_groups)
 
     context = _BuildContext(
@@ -250,6 +254,21 @@ async def build_knockout_bracket(db: AsyncSession) -> KnockoutBracketResponse:
 
     for match_number in sorted(KNOCKOUT_MATCH_DEFS):
         _build_match(context, match_number)
+
+    return context
+
+
+async def resolve_all_knockout_matches(db: AsyncSession) -> dict[int, ResolvedMatch]:
+    """Resolve every knockout match slot (teams and/or bracket labels)."""
+    context = await _build_knockout_context(db)
+    return context.resolved_matches
+
+
+async def build_knockout_bracket(db: AsyncSession) -> KnockoutBracketResponse:
+    context = await _build_knockout_context(db)
+    combination_key: str | None = None
+    if len(context.qualifying_third_groups) == 8:
+        combination_key = "".join(sorted(context.qualifying_third_groups))
 
     return KnockoutBracketResponse(
         left=BracketSideData(

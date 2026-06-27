@@ -16,10 +16,12 @@ export interface TeamStanding {
   goalsAgainst: number
   goalDifference: number
   points: number
+  qualifiedToKnockout?: boolean
 }
 
 export interface GroupStanding {
   groupLetter: string // 'A' through 'L'
+  isComplete?: boolean
   teams: TeamStanding[]
 }
 

@@ -13,6 +13,7 @@ function transformStandingsResponse(data: any): StandingsData {
   return {
     groups: data.groups.map((group: any) => ({
       groupLetter: group.group_letter,
+      isComplete: group.is_complete ?? false,
       teams: group.teams.map((team: any) => ({
         position: team.position,
         countryCode: team.country_code,
@@ -26,6 +27,7 @@ function transformStandingsResponse(data: any): StandingsData {
         goalsAgainst: team.goals_against,
         goalDifference: team.goal_difference,
         points: team.points,
+        qualifiedToKnockout: team.qualified_to_knockout ?? false,
       })),
     })),
   }
@@ -47,6 +49,7 @@ export async function getGroupStandings(groupLetter: string): Promise<StandingsD
   const group = response.data
   return {
     groupLetter: group.group_letter,
+    isComplete: group.is_complete ?? false,
     teams: group.teams.map((team: any) => ({
       position: team.position,
       countryCode: team.country_code,
@@ -60,6 +63,7 @@ export async function getGroupStandings(groupLetter: string): Promise<StandingsD
       goalsAgainst: team.goals_against,
       goalDifference: team.goal_difference,
       points: team.points,
+      qualifiedToKnockout: team.qualified_to_knockout ?? false,
     })),
   }
 }

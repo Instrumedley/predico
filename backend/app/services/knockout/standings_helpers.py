@@ -151,3 +151,33 @@ def rank_third_place_teams(
         reverse=True,
     )
     return third_place_rows
+
+
+def get_knockout_qualified_team_ids(
+    standings_by_group: dict[str, GroupStandings],
+) -> set[int]:
+    """
+    Teams confirmed for the Round of 32 from finished groups.
+    Top two in each complete group always qualify; best third-place teams qualify
+    once all twelve groups are complete.
+    """
+    qualified: set[int] = set()
+    ranked_third = rank_third_place_teams(standings_by_group)
+    qualifying_third_ids = (
+        {team.team_id for _, team in ranked_third[:8]} if len(ranked_third) == 12 else set()
+    )
+
+    for group in standings_by_group.values():
+        if not group.is_complete:
+            continue
+
+        for position in (1, 2):
+            team = get_team_at_position(group, position)
+            if team:
+                qualified.add(team.team_id)
+
+        third = get_team_at_position(group, 3)
+        if third and third.team_id in qualifying_third_ids:
+            qualified.add(third.team_id)
+
+    return qualified

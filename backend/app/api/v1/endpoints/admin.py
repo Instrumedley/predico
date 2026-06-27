@@ -14,9 +14,13 @@ from app.core.security import get_current_user
 from app.db.database import get_db
 from app.db.models import Game, Prediction, User, KnockoutMatchResult
 from app.db.models.game import GameStatus
-from app.api.v1.endpoints.games import GameResponse, game_to_response
+from app.api.v1.endpoints.games import GameResponse, _build_game_responses, game_to_response
 from app.services.knockout.bracket_service import bracket_to_api_dict, build_knockout_bracket
 from app.services.knockout.bracket_structure import KNOCKOUT_MATCH_DEFS
+from app.services.knockout.knockout_sync_service import (
+    get_knockout_game_by_match_number,
+    sync_knockout_game_teams,
+)
 
 router = APIRouter()
 
@@ -234,6 +238,9 @@ async def update_game_result(
     from app.services.scoring_service import score_all_predictions_for_game
 
     scored = await score_all_predictions_for_game(game, db)
+
+    if not game.is_knockout:
+        await sync_knockout_game_teams(db)
     
     return {
         "message": "Game result updated successfully",
@@ -321,7 +328,22 @@ async def update_knockout_match_result(
     record.home_score = payload.home_score
     record.away_score = payload.away_score
     record.winner_team_id = payload.winner_team_id
+
+    game = await get_knockout_game_by_match_number(db, match_number)
+    if game:
+        game.home_score = payload.home_score
+        game.away_score = payload.away_score
+        game.status = GameStatus.FINISHED
+
     await db.commit()
+
+    if game:
+        await db.refresh(game)
+        from app.services.scoring_service import score_all_predictions_for_game
+
+        await score_all_predictions_for_game(game, db)
+
+    await sync_knockout_game_teams(db)
 
     updated_bracket = await build_knockout_bracket(db)
     return {
@@ -350,7 +372,26 @@ async def reset_knockout_match_result(
         )
 
     await db.delete(record)
+
+    game = await get_knockout_game_by_match_number(db, match_number)
+    if game:
+        game.status = GameStatus.SCHEDULED
+        game.home_score = None
+        game.away_score = None
+        game.home_penalty_score = None
+        game.away_penalty_score = None
+
+        predictions_query = select(Prediction).where(Prediction.game_id == game.id)
+        predictions_result = await db.execute(predictions_query)
+        for prediction in predictions_result.scalars().all():
+            prediction.points = 0
+            prediction.exact_score_points = 0
+            prediction.correct_result_points = 0
+            prediction.correct_goal_difference_points = 0
+            prediction.is_calculated = False
+
     await db.commit()
+    await sync_knockout_game_teams(db)
 
     return {"message": "Knockout match result cleared", "match_number": match_number}
 
@@ -469,6 +510,7 @@ async def reset_all_games(
         await db.delete(record)
 
     await db.commit()
+    await sync_knockout_game_teams(db)
 
     return {
         "message": "All games reset successfully",

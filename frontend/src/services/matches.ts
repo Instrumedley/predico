@@ -37,8 +37,12 @@ interface ApiGroup {
 
 interface ApiMatchResponse {
   id: number
-  home_team: ApiTeam
-  away_team: ApiTeam
+  home_team?: ApiTeam | null
+  away_team?: ApiTeam | null
+  home_slot_label?: string | null
+  away_slot_label?: string | null
+  teams_resolved?: boolean
+  is_knockout?: boolean
   scheduled_at: string
   match_date?: string | null
   match_time?: string | null // Time string (HH:MM:SS)
@@ -60,18 +64,26 @@ interface ApiMatchResponse {
 function transformMatchResponse(match: ApiMatchResponse): Match {
   return {
     id: match.id,
-    homeTeam: {
-      id: match.home_team.id,
-      name: match.home_team.name,
-      countryCode: match.home_team.country_code,
-      flagEmoji: match.home_team.flag_emoji ?? undefined,
-    },
-    awayTeam: {
-      id: match.away_team.id,
-      name: match.away_team.name,
-      countryCode: match.away_team.country_code,
-      flagEmoji: match.away_team.flag_emoji ?? undefined,
-    },
+    homeTeam: match.home_team
+      ? {
+          id: match.home_team.id,
+          name: match.home_team.name,
+          countryCode: match.home_team.country_code,
+          flagEmoji: match.home_team.flag_emoji ?? undefined,
+        }
+      : null,
+    awayTeam: match.away_team
+      ? {
+          id: match.away_team.id,
+          name: match.away_team.name,
+          countryCode: match.away_team.country_code,
+          flagEmoji: match.away_team.flag_emoji ?? undefined,
+        }
+      : null,
+    homeSlotLabel: match.home_slot_label ?? undefined,
+    awaySlotLabel: match.away_slot_label ?? undefined,
+    teamsResolved: match.teams_resolved ?? Boolean(match.home_team && match.away_team),
+    isKnockout: match.is_knockout ?? false,
     scheduledAt: parseUtcDateTime(match.scheduled_at).toISOString(),
     matchDate: match.match_date ?? undefined,
     matchTime: match.match_time ?? undefined,

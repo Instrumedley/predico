@@ -23,8 +23,8 @@ class Game(Base):
     __tablename__ = "games"
     
     id = Column(Integer, primary_key=True, index=True)
-    home_team_id = Column(Integer, ForeignKey("teams.id"), nullable=False, index=True)
-    away_team_id = Column(Integer, ForeignKey("teams.id"), nullable=False, index=True)
+    home_team_id = Column(Integer, ForeignKey("teams.id"), nullable=True, index=True)
+    away_team_id = Column(Integer, ForeignKey("teams.id"), nullable=True, index=True)
     scheduled_at = Column(DateTime, nullable=False, index=True)
     match_date = Column(Date, nullable=True, index=True)  # Date of the match (without time)
     match_time = Column(Time, nullable=True)  # Time of the match (local time)

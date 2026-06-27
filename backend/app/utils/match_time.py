@@ -106,9 +106,17 @@ def get_prediction_deadline_utc(game: "Game") -> Optional[datetime]:
     return kickoff - timedelta(hours=PREDICTION_LOCK_HOURS_BEFORE_KICKOFF)
 
 
+def are_teams_resolved(game: "Game") -> bool:
+    """True when both home and away teams are assigned."""
+    return game.home_team_id is not None and game.away_team_id is not None
+
+
 def is_prediction_locked(game: "Game", now: Optional[datetime] = None) -> bool:
     """True when predictions can no longer be created or updated."""
     if game.status.value != "scheduled":
+        return True
+
+    if game.is_knockout and not are_teams_resolved(game):
         return True
 
     deadline = get_prediction_deadline_utc(game)

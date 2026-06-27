@@ -13,7 +13,7 @@ from app.db.database import get_db
 from app.db.models import Prediction, Game, User
 from app.db.models.game import GameStatus
 from app.core.security import get_current_user
-from app.utils.match_time import is_prediction_locked
+from app.utils.match_time import is_prediction_locked, are_teams_resolved
 
 router = APIRouter()
 
@@ -24,6 +24,12 @@ def _ensure_prediction_allowed(game: Game) -> None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Predictions are closed for this match.",
+        )
+
+    if game.is_knockout and not are_teams_resolved(game):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Predictions are locked until both teams are confirmed.",
         )
 
     if is_prediction_locked(game):

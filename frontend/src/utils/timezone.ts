@@ -109,10 +109,17 @@ export function getPredictionDeadline(match: Pick<Match, 'scheduledAt' | 'matchD
  * True when predictions should be locked (1 hour before kickoff or non-scheduled).
  */
 export function isPredictionLocked(
-  match: Pick<Match, 'scheduledAt' | 'matchDate' | 'matchTime' | 'timezone' | 'status'>,
+  match: Pick<
+    Match,
+    'scheduledAt' | 'matchDate' | 'matchTime' | 'timezone' | 'status' | 'teamsResolved'
+  >,
   now: Date = new Date()
 ): boolean {
   if (match.status !== 'scheduled') {
+    return true
+  }
+
+  if (match.teamsResolved === false) {
     return true
   }
 

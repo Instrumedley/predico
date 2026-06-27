@@ -10,6 +10,10 @@ from typing import List, Dict, Optional
 from app.db.database import get_db
 from app.db.models import Team, Group, GroupTeam, Game
 from app.db.models.game import GameStatus
+from app.services.knockout.standings_helpers import (
+    get_knockout_qualified_team_ids,
+    load_group_standings,
+)
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -28,6 +32,7 @@ class TeamStandingResponse(BaseModel):
     goals_against: int
     goal_difference: int
     points: int
+    qualified_to_knockout: bool = False
 
     class Config:
         from_attributes = True
@@ -35,6 +40,7 @@ class TeamStandingResponse(BaseModel):
 
 class GroupStandingResponse(BaseModel):
     group_letter: str
+    is_complete: bool = False
     teams: List[TeamStandingResponse]
 
     class Config:
@@ -56,6 +62,9 @@ async def get_standings(db: AsyncSession = Depends(get_db)):
     Calculates standings based on completed games in the database.
     Teams with no games played will show 0 for all stats.
     """
+    standings_by_group = await load_group_standings(db)
+    qualified_team_ids = get_knockout_qualified_team_ids(standings_by_group)
+
     # Get all groups
     groups_query = select(Group).order_by(Group.name.asc())
     groups_result = await db.execute(groups_query)
@@ -154,14 +163,18 @@ async def get_standings(db: AsyncSession = Depends(get_db)):
                 goals_for=stats['goals_for'],
                 goals_against=stats['goals_against'],
                 goal_difference=stats['goal_difference'],
-                points=stats['points']
+                points=stats['points'],
+                qualified_to_knockout=team.id in qualified_team_ids,
             ))
         
         # Extract group letter (e.g., "Group A" -> "A")
         group_letter = group.name.split()[-1] if ' ' in group.name else group.name
+        group_meta = standings_by_group.get(group_letter.upper())
+        is_complete = group_meta.is_complete if group_meta else False
         
         standings_groups.append(GroupStandingResponse(
             group_letter=group_letter,
+            is_complete=is_complete,
             teams=team_standings
         ))
     
@@ -174,6 +187,8 @@ async def get_group_standings(group_letter: str, db: AsyncSession = Depends(get_
     Get standings for a specific group.
     """
     group_name = f"Group {group_letter.upper()}"
+    standings_by_group = await load_group_standings(db)
+    qualified_team_ids = get_knockout_qualified_team_ids(standings_by_group)
     
     # Get the group
     group_query = select(Group).where(Group.name == group_name)
@@ -276,11 +291,16 @@ async def get_group_standings(group_letter: str, db: AsyncSession = Depends(get_
             goals_for=stats['goals_for'],
             goals_against=stats['goals_against'],
             goal_difference=stats['goal_difference'],
-            points=stats['points']
+            points=stats['points'],
+            qualified_to_knockout=team.id in qualified_team_ids,
         ))
     
+    group_meta = standings_by_group.get(group_letter.upper())
+    is_complete = group_meta.is_complete if group_meta else False
+
     return GroupStandingResponse(
         group_letter=group_letter.upper(),
+        is_complete=is_complete,
         teams=team_standings
     )
 

@@ -247,8 +247,8 @@ export const AdminPage: React.FC = () => {
                     {JSON.stringify(
                       games.map((g) => ({
                         id: g.id,
-                        homeTeam: g.homeTeam.name,
-                        awayTeam: g.awayTeam.name,
+                        homeTeam: g.homeTeam?.name ?? g.homeSlotLabel,
+                        awayTeam: g.awayTeam?.name ?? g.awaySlotLabel,
                         group: g.group,
                       })),
                       null,
@@ -295,11 +295,11 @@ export const AdminPage: React.FC = () => {
                         {/* Home Team */}
                         <div className="flex items-center space-x-3">
                           <span
-                            className={`fi fi-${getCountryCodeForFlag(match.homeTeam.countryCode)} fis`}
+                            className={`fi fi-${getCountryCodeForFlag(match.homeTeam!.countryCode)} fis`}
                             style={{ fontSize: '1.5rem' }}
                           ></span>
                           <span className="font-medium text-neutral-DEFAULT">
-                            {match.homeTeam.name}
+                            {match.homeTeam!.name}
                           </span>
                         </div>
 
@@ -329,10 +329,10 @@ export const AdminPage: React.FC = () => {
                         {/* Away Team */}
                         <div className="flex items-center space-x-3 justify-end">
                           <span className="font-medium text-neutral-DEFAULT text-right">
-                            {match.awayTeam.name}
+                            {match.awayTeam!.name}
                           </span>
                           <span
-                            className={`fi fi-${getCountryCodeForFlag(match.awayTeam.countryCode)} fis`}
+                            className={`fi fi-${getCountryCodeForFlag(match.awayTeam!.countryCode)} fis`}
                             style={{ fontSize: '1.5rem' }}
                           ></span>
                         </div>

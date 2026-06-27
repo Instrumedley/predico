@@ -1,6 +1,6 @@
 """
 Script to populate database with official 2026 FIFA World Cup data.
-Includes teams, groups, rounds, and group stage matches.
+Includes teams, groups, rounds, group stage matches, and knockout placeholders.
 """
 import asyncio
 import os
@@ -25,6 +25,18 @@ from app.db.models.team import Team
 from app.db.models.group import Group, GroupTeam
 from app.db.models.round import Round, RoundType
 from app.db.models.game import Game, GameStatus
+from app.services.knockout.bracket_structure import KNOCKOUT_MATCH_DEFS
+from app.services.knockout.knockout_sync_service import apply_kickoff_to_game
+from scripts.world_cup_knockout_kickoffs import KNOCKOUT_KICKOFFS_BY_MATCH
+
+KNOCKOUT_ROUND_KEY_TO_NAME = {
+    "r32": "Round of 32",
+    "r16": "Round of 16",
+    "qf": "Quarterfinals",
+    "sf": "Semifinals",
+    "third_place": "Third Place",
+    "final": "Final",
+}
 
 # Country code to flag emoji mapping
 # Using ISO 3166-1 alpha-3 country codes
@@ -404,9 +416,9 @@ async def create_group_stage_games(session):
     rounds_result = await session.execute(select(Round))
     rounds = {round.name: round for round in rounds_result.scalars().all()}
     
-    match_number = 1
-    
-    for group_letter, home_team_name, away_team_name, match_date, matchday_name in GROUP_STAGE_MATCHES:
+    for match_number, (group_letter, home_team_name, away_team_name, match_date, matchday_name) in enumerate(
+        GROUP_STAGE_MATCHES, start=1
+    ):
         group_name = f"Group {group_letter}"
         
         home_team = teams.get(home_team_name)
@@ -430,16 +442,25 @@ async def create_group_stage_games(session):
         # Create scheduled_at datetime (use 12:00 PM as default time)
         scheduled_at = datetime.combine(match_date, time(12, 0))
         
-        # Check if game already exists
-        result = await session.execute(
+        # Prefer match_number lookup (stable across re-runs), fall back to fixture identity
+        by_number_result = await session.execute(
             select(Game).where(
-                Game.home_team_id == home_team.id,
-                Game.away_team_id == away_team.id,
-                Game.match_date == match_date,
-                Game.group_id == group.id
+                Game.match_number == match_number,
+                Game.is_knockout.is_(False),
             )
         )
-        existing = result.scalar_one_or_none()
+        existing = by_number_result.scalar_one_or_none()
+
+        if existing is None:
+            result = await session.execute(
+                select(Game).where(
+                    Game.home_team_id == home_team.id,
+                    Game.away_team_id == away_team.id,
+                    Game.match_date == match_date,
+                    Game.group_id == group.id,
+                )
+            )
+            existing = result.scalar_one_or_none()
         
         if not existing:
             new_game = Game(
@@ -451,15 +472,23 @@ async def create_group_stage_games(session):
                 round_id=round_obj.id,
                 group_id=group.id,
                 is_knockout=False,
-                match_number=match_number
+                match_number=match_number,
             )
             session.add(new_game)
             games_created += 1
-            print(f"  Created: {home_team_name} vs {away_team_name} ({match_date}) - {matchday_name}")
-            match_number += 1
+            print(f"  Created: Match {match_number} — {home_team_name} vs {away_team_name} ({match_date})")
         else:
             # Update existing game if needed
             updated = False
+            if existing.match_number != match_number:
+                existing.match_number = match_number
+                updated = True
+            if existing.home_team_id != home_team.id:
+                existing.home_team_id = home_team.id
+                updated = True
+            if existing.away_team_id != away_team.id:
+                existing.away_team_id = away_team.id
+                updated = True
             if existing.match_date != match_date:
                 existing.match_date = match_date
                 updated = True
@@ -472,14 +501,80 @@ async def create_group_stage_games(session):
             if existing.group_id != group.id:
                 existing.group_id = group.id
                 updated = True
+            if existing.is_knockout:
+                existing.is_knockout = False
+                updated = True
             if updated:
-                games_skipped += 1  # Count as updated
-                print(f"  Updated: {home_team_name} vs {away_team_name} ({match_date})")
+                games_skipped += 1
+                print(f"  Updated: Match {match_number} — {home_team_name} vs {away_team_name} ({match_date})")
             else:
                 games_skipped += 1
     
     await session.commit()
     print(f"✓ Games: {games_created} created, {games_skipped} skipped/updated\n")
+    return games_created
+
+
+async def create_knockout_games(session):
+    """Create knockout-stage game rows (teams TBD until bracket resolves)."""
+    print("Creating knockout games...")
+    games_created = 0
+    games_updated = 0
+
+    rounds_result = await session.execute(select(Round))
+    rounds = {round.name: round for round in rounds_result.scalars().all()}
+
+    for match_number, match_def in sorted(KNOCKOUT_MATCH_DEFS.items()):
+        round_name = KNOCKOUT_ROUND_KEY_TO_NAME[match_def.round_key]
+        round_obj = rounds.get(round_name)
+        if not round_obj:
+            print(f"  WARNING: Round {round_name} not found for match {match_number}")
+            continue
+
+        kickoff = KNOCKOUT_KICKOFFS_BY_MATCH.get(match_number)
+        if not kickoff:
+            print(f"  WARNING: No kickoff data for match {match_number}")
+            continue
+
+        match_date, hour, minute, venue_offset = kickoff
+        scheduled_at = datetime.combine(match_date, time(hour, minute))
+
+        result = await session.execute(
+            select(Game).where(Game.match_number == match_number)
+        )
+        existing = result.scalar_one_or_none()
+
+        if existing:
+            updated = False
+            if not existing.is_knockout:
+                existing.is_knockout = True
+                updated = True
+            if existing.round_id != round_obj.id:
+                existing.round_id = round_obj.id
+                updated = True
+            apply_kickoff_to_game(existing, match_date, hour, minute, venue_offset)
+            if updated:
+                games_updated += 1
+            continue
+
+        new_game = Game(
+            home_team_id=None,
+            away_team_id=None,
+            scheduled_at=scheduled_at,
+            match_date=match_date,
+            status=GameStatus.SCHEDULED,
+            round_id=round_obj.id,
+            group_id=None,
+            is_knockout=True,
+            match_number=match_number,
+        )
+        apply_kickoff_to_game(new_game, match_date, hour, minute, venue_offset)
+        session.add(new_game)
+        games_created += 1
+        print(f"  Created: Match {match_number} ({round_name}, {match_date})")
+
+    await session.commit()
+    print(f"✓ Knockout games: {games_created} created, {games_updated} updated\n")
     return games_created
 
 
@@ -506,6 +601,9 @@ async def main():
             
             # Create group stage games
             await create_group_stage_games(session)
+
+            # Create knockout placeholder games
+            await create_knockout_games(session)
         
         print("=" * 80)
         print("✓ Database population complete!")

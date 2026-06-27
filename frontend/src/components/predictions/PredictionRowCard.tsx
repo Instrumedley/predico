@@ -56,6 +56,11 @@ export const PredictionRowCard: React.FC<PredictionRowCardProps> = ({
   const isFinalized = match.status === 'finished'
   const isLocked = isPredictionLocked(match)
   const hasPrediction = prediction !== null && prediction !== undefined
+  const homeDisplayName = match.homeTeam?.name ?? match.homeSlotLabel ?? 'TBD'
+  const awayDisplayName = match.awayTeam?.name ?? match.awaySlotLabel ?? 'TBD'
+  const showHomeFlag = Boolean(match.homeTeam)
+  const showAwayFlag = Boolean(match.awayTeam)
+  const teamsPending = match.teamsResolved === false
 
   const formatDate = (dateString?: string): string => {
     if (!dateString) return ''
@@ -64,6 +69,7 @@ export const PredictionRowCard: React.FC<PredictionRowCardProps> = ({
 
   const getMatchStatus = (): string => {
     if (isFinalized) return 'FINALIZED'
+    if (teamsPending) return 'TEAMS TBD'
     if (isLocked) return 'LOCKED'
     return 'UPCOMING'
   }
@@ -134,11 +140,15 @@ export const PredictionRowCard: React.FC<PredictionRowCardProps> = ({
       className={`rounded-lg border shadow-sm p-3 ${getBorderClass()}`}
       style={cardStyle}
     >
-      {/* Group Label Row */}
-      {match.group && (
+      {/* Group / match label row */}
+      {(match.group || match.matchNumber) && (
         <div className="mb-2 pb-2 border-b border-neutral-DEFAULT/20">
           <span className={`text-sm font-medium ${getTextColorClass('text-neutral-DEFAULT/70')}`}>
-            Group {match.group.letter}
+            {match.group
+              ? `Group ${match.group.letter}`
+              : match.matchNumber
+              ? `Match ${match.matchNumber}`
+              : ''}
           </span>
         </div>
       )}
@@ -147,8 +157,12 @@ export const PredictionRowCard: React.FC<PredictionRowCardProps> = ({
       <div className="flex items-center justify-between mb-2">
         {/* Home Team Name */}
         <div className="flex-1 text-left">
-          <span className={`font-bold uppercase text-sm ${getTextColorClass('text-neutral-DEFAULT')}`}>
-            {abbreviateCountryName(match.homeTeam.name)}
+          <span
+            className={`font-bold uppercase text-sm ${getTextColorClass(
+              match.homeTeam ? 'text-neutral-DEFAULT' : 'text-neutral-DEFAULT/60'
+            )}`}
+          >
+            {match.homeTeam ? abbreviateCountryName(homeDisplayName) : homeDisplayName}
           </span>
         </div>
 
@@ -231,8 +245,12 @@ export const PredictionRowCard: React.FC<PredictionRowCardProps> = ({
 
         {/* Away Team Name */}
         <div className="flex-1 text-right">
-          <span className={`font-bold uppercase text-sm ${getTextColorClass('text-neutral-DEFAULT')}`}>
-            {abbreviateCountryName(match.awayTeam.name)}
+          <span
+            className={`font-bold uppercase text-sm ${getTextColorClass(
+              match.awayTeam ? 'text-neutral-DEFAULT' : 'text-neutral-DEFAULT/60'
+            )}`}
+          >
+            {match.awayTeam ? abbreviateCountryName(awayDisplayName) : awayDisplayName}
           </span>
         </div>
       </div>
@@ -241,10 +259,19 @@ export const PredictionRowCard: React.FC<PredictionRowCardProps> = ({
       <div className="flex items-center justify-center space-x-4 mb-2 py-2">
         {/* Home Team Flag */}
         <div className="flex flex-col items-center space-y-2">
-          <span
-            className={`fi fi-${getCountryCodeForFlag(match.homeTeam.countryCode)} fis`}
-            style={{ fontSize: '3.5rem' }}
-          ></span>
+          {showHomeFlag ? (
+            <span
+              className={`fi fi-${getCountryCodeForFlag(match.homeTeam!.countryCode)} fis`}
+              style={{ fontSize: '3.5rem' }}
+            ></span>
+          ) : (
+            <div
+              className="w-14 h-10 rounded border-2 border-dashed border-neutral-DEFAULT/30 flex items-center justify-center text-xs font-bold text-neutral-DEFAULT/40"
+              aria-hidden
+            >
+              ?
+            </div>
+          )}
           <span className={`text-lg font-bold ${getTextColorClass('text-neutral-DEFAULT')}`}>
             {isFinalized
               ? hasPrediction
@@ -265,10 +292,19 @@ export const PredictionRowCard: React.FC<PredictionRowCardProps> = ({
 
         {/* Away Team Flag */}
         <div className="flex flex-col items-center space-y-2">
-          <span
-            className={`fi fi-${getCountryCodeForFlag(match.awayTeam.countryCode)} fis`}
-            style={{ fontSize: '3.5rem' }}
-          ></span>
+          {showAwayFlag ? (
+            <span
+              className={`fi fi-${getCountryCodeForFlag(match.awayTeam!.countryCode)} fis`}
+              style={{ fontSize: '3.5rem' }}
+            ></span>
+          ) : (
+            <div
+              className="w-14 h-10 rounded border-2 border-dashed border-neutral-DEFAULT/30 flex items-center justify-center text-xs font-bold text-neutral-DEFAULT/40"
+              aria-hidden
+            >
+              ?
+            </div>
+          )}
           <span className={`text-lg font-bold ${getTextColorClass('text-neutral-DEFAULT')}`}>
             {isFinalized
               ? hasPrediction

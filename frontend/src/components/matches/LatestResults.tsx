@@ -69,11 +69,11 @@ export const LatestResults: React.FC<LatestResultsProps> = ({ data: propData }) 
               {/* Home Team */}
               <div className="flex items-center space-x-2 flex-1">
                 <span
-                  className={`fi fi-${getCountryCodeForFlag(match.homeTeam.countryCode)} fis`}
+                  className={`fi fi-${getCountryCodeForFlag(match.homeTeam!.countryCode)} fis`}
                   style={{ fontSize: '1.2rem' }}
                 ></span>
                 <span className="text-sm font-medium text-neutral-DEFAULT">
-                  {abbreviateCountryName(match.homeTeam.name)}
+                  {abbreviateCountryName(match.homeTeam!.name)}
                 </span>
               </div>
 
@@ -96,10 +96,10 @@ export const LatestResults: React.FC<LatestResultsProps> = ({ data: propData }) 
               {/* Away Team */}
               <div className="flex items-center space-x-2 flex-1 justify-end">
                 <span className="text-sm font-medium text-neutral-DEFAULT">
-                  {abbreviateCountryName(match.awayTeam.name)}
+                  {abbreviateCountryName(match.awayTeam!.name)}
                 </span>
                 <span
-                  className={`fi fi-${getCountryCodeForFlag(match.awayTeam.countryCode)} fis`}
+                  className={`fi fi-${getCountryCodeForFlag(match.awayTeam!.countryCode)} fis`}
                   style={{ fontSize: '1.2rem' }}
                 ></span>
               </div>

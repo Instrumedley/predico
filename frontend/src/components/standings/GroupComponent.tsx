@@ -8,6 +8,7 @@ interface GroupComponentProps {
 }
 
 export const GroupComponent: React.FC<GroupComponentProps> = ({ group }) => {
+  const KNOCKOUT_QUALIFIED_BG = '#D1E231'
 
   return (
     <div className="bg-white rounded-lg border border-neutral-DEFAULT/20 shadow-sm overflow-hidden w-full min-w-[280px]">
@@ -49,10 +50,14 @@ export const GroupComponent: React.FC<GroupComponentProps> = ({ group }) => {
             </tr>
           </thead>
           <tbody>
-            {group.teams.map((team) => (
+            {group.teams.map((team) => {
+              const isQualified = group.isComplete && team.qualifiedToKnockout
+
+              return (
               <tr
                 key={team.countryCode}
-                className={`border-t border-neutral-DEFAULT/10 hover:bg-neutral-light/50 transition-colors`}
+                className="border-t border-neutral-DEFAULT/10 transition-colors"
+                style={isQualified ? { backgroundColor: KNOCKOUT_QUALIFIED_BG } : undefined}
               >
                 {/* Position */}
                 <td className="px-1 py-1.5 text-center text-neutral-DEFAULT font-medium">
@@ -100,7 +105,8 @@ export const GroupComponent: React.FC<GroupComponentProps> = ({ group }) => {
                   {team.goalDifference}
                 </td>
               </tr>
-            ))}
+              )
+            })}
           </tbody>
         </table>
       </div>

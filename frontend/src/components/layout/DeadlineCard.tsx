@@ -26,10 +26,10 @@ function matchToDeadlineTarget(match: Match): Date | null {
 
 function matchToInfo(match: Match) {
   return {
-    homeTeam: match.homeTeam.name,
-    awayTeam: match.awayTeam.name,
-    homeTeamCountryCode: match.homeTeam.countryCode,
-    awayTeamCountryCode: match.awayTeam.countryCode,
+    homeTeam: match.homeTeam?.name ?? match.homeSlotLabel ?? 'TBD',
+    awayTeam: match.awayTeam?.name ?? match.awaySlotLabel ?? 'TBD',
+    homeTeamCountryCode: match.homeTeam?.countryCode ?? '',
+    awayTeamCountryCode: match.awayTeam?.countryCode ?? '',
     roundName: match.round?.name || 'Next Match',
   }
 }

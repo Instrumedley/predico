@@ -12,8 +12,12 @@ export interface Team {
 
 export interface Match {
   id: number
-  homeTeam: Team
-  awayTeam: Team
+  homeTeam?: Team | null
+  awayTeam?: Team | null
+  homeSlotLabel?: string
+  awaySlotLabel?: string
+  teamsResolved?: boolean
+  isKnockout?: boolean
   scheduledAt: string // ISO datetime string
   matchDate?: string // ISO date string
   matchTime?: string // Time string (HH:MM:SS)

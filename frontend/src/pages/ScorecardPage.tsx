@@ -25,6 +25,7 @@ export const ScorecardPage: React.FC = () => {
   const highlightedGameId = searchParams.get('game')
   const hasScrolledToGame = useRef(false)
   const [collapsedRounds, setCollapsedRounds] = useState<Set<number>>(new Set())
+  const [defaultCollapseApplied, setDefaultCollapseApplied] = useState(false)
   const [pendingPredictions, setPendingPredictions] = useState<Map<number, { homeScore: number; awayScore: number }>>(
     new Map()
   )
@@ -35,7 +36,7 @@ export const ScorecardPage: React.FC = () => {
   // Fetch all games
   const { data: games = [], isLoading: gamesLoading } = useQuery<Match[]>({
     queryKey: ['games'],
-    queryFn: () => getGames(),
+    queryFn: () => getGames({ limit: 150 }),
     staleTime: 1 * 60 * 1000, // 1 minute
   })
 
@@ -96,6 +97,19 @@ export const ScorecardPage: React.FC = () => {
     // Convert to array and sort by round ID
     return Array.from(roundsMap.values()).sort((a, b) => a.roundId - b.roundId)
   }, [games, predictionsMap])
+
+  // Collapse all rounds by default; scroll-to-game logic expands the target round
+  useEffect(() => {
+    if (defaultCollapseApplied || games.length === 0) {
+      return
+    }
+
+    const roundIds = new Set(
+      games.map((game) => game.round?.id).filter((id): id is number => id !== undefined)
+    )
+    setCollapsedRounds(roundIds)
+    setDefaultCollapseApplied(true)
+  }, [defaultCollapseApplied, games])
 
   // Mutation for submitting a single prediction
   const submitPredictionMutation = useMutation({
