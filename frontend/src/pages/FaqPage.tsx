@@ -185,6 +185,32 @@ export const FaqPage: React.FC = () => {
           </section>
 
           <section className="bg-white rounded-lg border border-neutral-DEFAULT/20 shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-neutral-DEFAULT">Knockout stage</h2>
+            <div className="mt-3 space-y-3 text-sm text-neutral-DEFAULT/80 leading-relaxed">
+              <p>
+                Knockout matches use the same scoring rules as the group stage, but there is one important
+                difference in what counts as the &quot;actual&quot; result.
+              </p>
+              <p>
+                Your prediction is always for the score at the end of{' '}
+                <strong>regular time (90 minutes plus stoppage time)</strong> — the standard full-time whistle,
+                not extra time or a penalty shootout.
+              </p>
+              <p>
+                When we score your prediction, we compare it to that 90-minute score only. If a knockout match
+                goes to extra time or penalties, those goals do <strong>not</strong> change your points. Example:
+                if the match is 1–1 after 90 minutes and Team A wins on penalties, the result used for scoring
+                is <strong>1–1</strong>, not the shootout outcome.
+              </p>
+              <p>
+                In admin, the knockout winner (who advances) can still be recorded separately when a match is
+                decided after extra time or on penalties — that is for the bracket only and does not affect how
+                your prediction is scored.
+              </p>
+            </div>
+          </section>
+
+          <section className="bg-white rounded-lg border border-neutral-DEFAULT/20 shadow-sm p-6">
             <h2 className="text-lg font-semibold text-neutral-DEFAULT">Quick reference</h2>
             <dl className="mt-4 grid gap-3 text-sm">
               <div className="flex justify-between gap-4 border-b border-neutral-DEFAULT/10 pb-2">
