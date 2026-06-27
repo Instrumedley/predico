@@ -69,6 +69,9 @@ async def update_game_times(session) -> None:
     not_found_count = 0
 
     for game in games:
+        if game.is_knockout or not game.home_team or not game.away_team:
+            continue
+
         home_team_name = game.home_team.name
         away_team_name = game.away_team.name
         key = (home_team_name, away_team_name)
