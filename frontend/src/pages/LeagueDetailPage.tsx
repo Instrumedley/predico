@@ -264,6 +264,11 @@ export const LeagueDetailPage: React.FC = () => {
                       Joining closed
                     </span>
                   )}
+                  {league.members_start_at_zero && (
+                    <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-800">
+                      Fresh start
+                    </span>
+                  )}
                 </div>
 
                 {!league.is_member && !league.is_join_locked && (
@@ -305,6 +310,8 @@ export const LeagueDetailPage: React.FC = () => {
                   <h2 className="text-sm font-semibold text-neutral-DEFAULT">League ranking</h2>
                   <p className="mt-1 text-xs text-neutral-DEFAULT/60">
                     Click a player to view their predictions.
+                    {league.members_start_at_zero &&
+                      ' Scores only count points earned after each member joined this league.'}
                     {league.is_creator && ' As the creator, you can remove members from this list.'}
                   </p>
                 </div>

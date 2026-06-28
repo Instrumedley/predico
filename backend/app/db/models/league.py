@@ -21,6 +21,7 @@ class League(Base):
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     is_private = Column(Boolean, default=True, nullable=False, index=True)
     is_join_locked = Column(Boolean, default=False, nullable=False, index=True)
+    members_start_at_zero = Column(Boolean, default=False, nullable=False, index=True)
     invite_code = Column(String, unique=True, nullable=True, index=True)  # Unique code for joining
     
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -44,9 +45,13 @@ class LeagueMember(Base):
     league_id = Column(Integer, ForeignKey("leagues.id"), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     
-    # League-specific score (total points in this league)
+    # Cached global score (updated when predictions are scored)
     total_points = Column(Integer, default=0, nullable=False, index=True)
-    
+
+    # Baseline snapshot when joining a league with members_start_at_zero
+    points_at_join = Column(Integer, default=0, nullable=False)
+    perfect_predictions_at_join = Column(Integer, default=0, nullable=False)
+
     # Metadata
     joined_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     

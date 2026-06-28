@@ -1,7 +1,7 @@
 """
 League helper functions for rankings, member points, and invitations.
 """
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from typing import List, Optional, Tuple
 
 from sqlalchemy import func, select
@@ -36,11 +36,55 @@ def assign_league_ranks(rows: List[LeagueRankingRow]) -> List[Tuple[int, int, st
     return ranked
 
 
+async def get_user_prediction_totals(db: AsyncSession, user_id: int) -> Tuple[int, int]:
+    """Return (total_points, perfect_predictions) for a user across all games."""
+    points_result = await db.execute(
+        select(func.coalesce(func.sum(Prediction.points), 0)).where(Prediction.user_id == user_id)
+    )
+    total_points = int(points_result.scalar_one())
+
+    perfect_result = await db.execute(
+        select(func.count(Prediction.id)).where(
+            Prediction.user_id == user_id,
+            Prediction.points == 100,
+        )
+    )
+    perfect_predictions = int(perfect_result.scalar_one())
+
+    return total_points, perfect_predictions
+
+
+async def create_league_member(
+    db: AsyncSession,
+    league: League,
+    user_id: int,
+) -> LeagueMember:
+    """Add a user to a league, storing score baselines when required."""
+    points_at_join = 0
+    perfect_predictions_at_join = 0
+    if league.members_start_at_zero:
+        points_at_join, perfect_predictions_at_join = await get_user_prediction_totals(db, user_id)
+
+    member = LeagueMember(
+        league_id=league.id,
+        user_id=user_id,
+        points_at_join=points_at_join,
+        perfect_predictions_at_join=perfect_predictions_at_join,
+    )
+    db.add(member)
+    return member
+
+
 async def get_league_rankings(db: AsyncSession, league_id: int) -> List[LeagueRankingRow]:
     """
     Return league standings as (user_id, username, total_points, perfect_predictions)
     sorted by points desc, perfect predictions desc, then username asc.
     """
+    league_result = await db.execute(select(League).where(League.id == league_id))
+    league = league_result.scalar_one_or_none()
+    if not league:
+        return []
+
     points_subquery = (
         select(
             Prediction.user_id.label("user_id"),
@@ -60,20 +104,33 @@ async def get_league_rankings(db: AsyncSession, league_id: int) -> List[LeagueRa
         .subquery()
     )
 
+    raw_points = func.coalesce(points_subquery.c.total_points, 0)
+    raw_perfect = func.coalesce(perfect_subquery.c.perfect_predictions, 0)
+
+    if league.members_start_at_zero:
+        total_points_expr = func.greatest(raw_points - LeagueMember.points_at_join, 0)
+        perfect_predictions_expr = func.greatest(
+            raw_perfect - LeagueMember.perfect_predictions_at_join,
+            0,
+        )
+    else:
+        total_points_expr = raw_points
+        perfect_predictions_expr = raw_perfect
+
     result = await db.execute(
         select(
             User.id,
             User.username,
-            func.coalesce(points_subquery.c.total_points, 0).label("total_points"),
-            func.coalesce(perfect_subquery.c.perfect_predictions, 0).label("perfect_predictions"),
+            total_points_expr.label("total_points"),
+            perfect_predictions_expr.label("perfect_predictions"),
         )
         .join(LeagueMember, LeagueMember.user_id == User.id)
         .outerjoin(points_subquery, points_subquery.c.user_id == User.id)
         .outerjoin(perfect_subquery, perfect_subquery.c.user_id == User.id)
         .where(LeagueMember.league_id == league_id)
         .order_by(
-            func.coalesce(points_subquery.c.total_points, 0).desc(),
-            func.coalesce(perfect_subquery.c.perfect_predictions, 0).desc(),
+            total_points_expr.desc(),
+            perfect_predictions_expr.desc(),
             User.username.asc(),
         )
     )
@@ -86,14 +143,27 @@ async def get_league_rankings(db: AsyncSession, league_id: int) -> List[LeagueRa
 
 async def sync_league_member_points(db: AsyncSession, user_id: int) -> None:
     """Update cached total_points on all league memberships for a user."""
-    points_result = await db.execute(
-        select(func.coalesce(func.sum(Prediction.points), 0)).where(Prediction.user_id == user_id)
-    )
-    total_points = int(points_result.scalar_one())
+    total_points, _ = await get_user_prediction_totals(db, user_id)
 
     members_result = await db.execute(select(LeagueMember).where(LeagueMember.user_id == user_id))
     for member in members_result.scalars().all():
         member.total_points = total_points
+
+
+def game_counts_for_league_member(game, joined_at: datetime) -> bool:
+    """True when a finished game's result should count toward league standings."""
+    from app.db.models.game import GameStatus
+
+    if game.status != GameStatus.FINISHED:
+        return False
+
+    if game.scheduled_at is not None:
+        return game.scheduled_at >= joined_at
+
+    if game.match_date is not None:
+        return datetime.combine(game.match_date, time.min) >= joined_at
+
+    return True
 
 
 async def create_or_refresh_league_invitation(
@@ -177,7 +247,7 @@ async def accept_league_invitation(
         )
     )
     if not existing.scalar_one_or_none():
-        db.add(LeagueMember(league_id=invitation.league_id, user_id=user.id))
+        await create_league_member(db, league, user.id)
 
     invitation.status = "accepted"
     invitation.invitee_id = user.id
