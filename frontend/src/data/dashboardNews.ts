@@ -12,6 +12,6 @@ export const DASHBOARD_NEWS_ITEMS: DashboardNewsItem[] = [
   {
     id: 'knockout-predictions-open-2026-06',
     message:
-      'The knockout stage matches are now open for you to enter your predictions! Good luck and Go Netherlands!',
+      'Knockout predictions are open! Guess the full-time score after 90 minutes — extra time and penalties do not count. Good luck and Go Netherlands!',
   },
 ]
