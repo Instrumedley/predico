@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.db.models import Game, Prediction
+from app.db.models import Game, League, LeagueMember, Prediction
 from app.db.models.game import GameStatus
 from app.schemas.league import (
     LeagueProgressMatch,
@@ -18,7 +18,7 @@ from app.schemas.league import (
     LeagueProgressMember,
     LeagueProgressResponse,
 )
-from app.services.league_service import assign_league_ranks, get_league_rankings
+from app.services.league_service import assign_league_ranks, game_counts_for_league_member, get_league_rankings
 
 
 def _match_label(home_code: str, away_code: str) -> str:
@@ -31,11 +31,23 @@ async def build_league_progress(
     current_user_id: int,
 ) -> LeagueProgressResponse:
     """Return cumulative points per finished match for league members."""
+    league_result = await db.execute(select(League).where(League.id == league_id))
+    league = league_result.scalar_one_or_none()
+    if not league:
+        return LeagueProgressResponse(matches=[], members=[], has_scored_matches=False)
+
     rankings = await get_league_rankings(db, league_id)
     if not rankings:
         return LeagueProgressResponse(matches=[], members=[], has_scored_matches=False)
 
     top_five_ids = {user_id for user_id, _, _, _ in rankings[:5]}
+
+    members_result = await db.execute(
+        select(LeagueMember).where(LeagueMember.league_id == league_id)
+    )
+    joined_at_by_user = {
+        member.user_id: member.joined_at for member in members_result.scalars().all()
+    }
 
     games_result = await db.execute(
         select(Game)
@@ -96,11 +108,19 @@ async def build_league_progress(
     members: List[LeagueProgressMember] = []
 
     for rank, user_id, username, total_points, _ in assign_league_ranks(rankings):
+        joined_at = joined_at_by_user.get(user_id)
         cumulative = [0]
         match_points: List[LeagueProgressMatchPoint] = []
         for game in games:
             has_prediction = has_prediction_by_user_game.get((user_id, game.id), False)
-            per_match_points = points_by_user_game.get((user_id, game.id), 0) if has_prediction else 0
+            raw_points = points_by_user_game.get((user_id, game.id), 0) if has_prediction else 0
+            if league.members_start_at_zero and joined_at is not None:
+                counts = game_counts_for_league_member(game, joined_at)
+                per_match_points = raw_points if counts else 0
+                has_prediction = has_prediction and counts
+            else:
+                per_match_points = raw_points
+
             match_points.append(
                 LeagueProgressMatchPoint(points=per_match_points, has_prediction=has_prediction)
             )

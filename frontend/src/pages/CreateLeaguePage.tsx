@@ -14,6 +14,7 @@ const createLeagueSchema = z
     description: z.string().max(500).optional(),
     is_private: z.boolean(),
     password: z.string().optional(),
+    members_start_at_zero: z.boolean(),
   })
   .superRefine((data, ctx) => {
     if (data.is_private && (!data.password || data.password.length < 4)) {
@@ -44,6 +45,7 @@ export const CreateLeaguePage: React.FC = () => {
       name: '',
       description: '',
       is_private: false,
+      members_start_at_zero: false,
     },
   })
 
@@ -81,6 +83,7 @@ export const CreateLeaguePage: React.FC = () => {
       description: data.description?.trim() || undefined,
       is_private: data.is_private,
       password: data.is_private ? data.password : undefined,
+      members_start_at_zero: data.members_start_at_zero,
     })
   }
 
@@ -175,6 +178,24 @@ export const CreateLeaguePage: React.FC = () => {
               )}
             </div>
           )}
+
+          <div className="flex items-start gap-3 rounded-md border border-neutral-DEFAULT/20 p-4">
+            <input
+              id="members_start_at_zero"
+              type="checkbox"
+              {...register('members_start_at_zero')}
+              className="mt-1 h-4 w-4 rounded border-neutral-DEFAULT/30 text-primary-medium focus:ring-primary-medium"
+            />
+            <div>
+              <label htmlFor="members_start_at_zero" className="text-sm font-medium text-neutral-DEFAULT">
+                All members start at 0 for this league
+              </label>
+              <p className="mt-1 text-xs text-neutral-DEFAULT/60">
+                Each member&apos;s score in this league only counts points earned after they join.
+                Platform scores and other leagues are not affected.
+              </p>
+            </div>
+          </div>
 
           <button
             type="submit"

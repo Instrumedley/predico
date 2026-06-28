@@ -38,9 +38,11 @@ from app.services.email_service import email_service
 from app.services.league_service import (
     accept_league_invitation,
     accept_pending_invites_for_user,
+    create_league_member,
     create_or_refresh_league_invitation,
     get_invitation_by_token,
     assign_league_ranks,
+    game_counts_for_league_member,
     get_league_rankings,
 )
 
@@ -154,7 +156,11 @@ def _ensure_league_accepts_joins(league: League) -> None:
         )
 
 
-def _prediction_to_league_member_prediction(prediction: Prediction) -> LeagueMemberPrediction:
+def _prediction_to_league_member_prediction(
+    prediction: Prediction,
+    *,
+    league_points: Optional[int] = None,
+) -> LeagueMemberPrediction:
     game_response = game_to_response(prediction.game)
     home_team = game_response.home_team
     away_team = game_response.away_team
@@ -162,7 +168,7 @@ def _prediction_to_league_member_prediction(prediction: Prediction) -> LeagueMem
         id=prediction.id,
         predicted_home_score=prediction.predicted_home_score,
         predicted_away_score=prediction.predicted_away_score,
-        points=prediction.points,
+        points=league_points if league_points is not None else prediction.points,
         game=LeagueMemberPredictionGame(
             id=game_response.id,
             status=game_response.status,
@@ -221,6 +227,7 @@ async def _build_league_detail(
         description=league.description,
         is_private=league.is_private,
         is_join_locked=league.is_join_locked,
+        members_start_at_zero=league.members_start_at_zero,
         created_at=league.created_at,
         created_by=league.created_by,
         member_count=member_count.get(league.id, 0),
@@ -383,6 +390,14 @@ async def get_league_member_predictions(
         detail="User is not a member of this league",
     )
 
+    member_result = await db.execute(
+        select(LeagueMember).where(
+            LeagueMember.league_id == league.id,
+            LeagueMember.user_id == user_id,
+        )
+    )
+    membership = member_result.scalar_one()
+
     predictions_query = (
         select(Prediction)
         .where(Prediction.user_id == user_id)
@@ -399,13 +414,31 @@ async def get_league_member_predictions(
     predictions_result = await db.execute(predictions_query)
     predictions = predictions_result.scalars().all()
 
-    total_points = sum(prediction.points for prediction in predictions)
+    if league.members_start_at_zero:
+        total_points = max(
+            0,
+            sum(prediction.points for prediction in predictions) - membership.points_at_join,
+        )
+        league_predictions = []
+        for prediction in predictions:
+            counts = game_counts_for_league_member(prediction.game, membership.joined_at)
+            league_predictions.append(
+                _prediction_to_league_member_prediction(
+                    prediction,
+                    league_points=prediction.points if counts else 0,
+                )
+            )
+    else:
+        total_points = sum(prediction.points for prediction in predictions)
+        league_predictions = [
+            _prediction_to_league_member_prediction(prediction) for prediction in predictions
+        ]
 
     return LeagueMemberPredictionsResponse(
         user_id=target_user.id,
         username=target_user.username,
         total_points=total_points,
-        predictions=[_prediction_to_league_member_prediction(prediction) for prediction in predictions],
+        predictions=league_predictions,
     )
 
 
@@ -438,11 +471,12 @@ async def create_league(
         created_by=current_user.id,
         is_private=payload.is_private,
         invite_code=invite_code,
+        members_start_at_zero=payload.members_start_at_zero,
     )
     db.add(league)
     await db.flush()
 
-    db.add(LeagueMember(league_id=league.id, user_id=current_user.id))
+    await create_league_member(db, league, current_user.id)
     await db.commit()
     await db.refresh(league)
 
@@ -451,6 +485,7 @@ async def create_league(
         name=league.name,
         description=league.description,
         is_private=league.is_private,
+        members_start_at_zero=league.members_start_at_zero,
         created_at=league.created_at,
         member_count=1,
         invite_code=league.invite_code,
@@ -483,7 +518,7 @@ async def join_league(
         if not code or code != league.invite_code:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid league password")
 
-    db.add(LeagueMember(league_id=league.id, user_id=current_user.id))
+    await create_league_member(db, league, current_user.id)
     await db.commit()
 
     return await _build_league_detail(db, league, current_user, is_member=True)

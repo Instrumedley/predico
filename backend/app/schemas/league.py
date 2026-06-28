@@ -13,6 +13,7 @@ class LeagueCreate(BaseModel):
     description: Optional[str] = Field(None, max_length=500)
     is_private: bool = False
     password: Optional[str] = Field(None, min_length=4, max_length=50)
+    members_start_at_zero: bool = False
 
     @model_validator(mode="after")
     def require_password_for_private(self) -> "LeagueCreate":
@@ -67,6 +68,7 @@ class LeagueDetail(BaseModel):
     description: Optional[str] = None
     is_private: bool
     is_join_locked: bool = False
+    members_start_at_zero: bool = False
     created_at: datetime
     created_by: int
     member_count: int
@@ -80,6 +82,7 @@ class LeagueCreateResponse(BaseModel):
     name: str
     description: Optional[str] = None
     is_private: bool
+    members_start_at_zero: bool = False
     created_at: datetime
     member_count: int
     invite_code: Optional[str] = None

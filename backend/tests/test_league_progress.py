@@ -45,6 +45,14 @@ async def test_build_league_progress_cumulative_points():
     db = AsyncMock()
     call_count = 0
 
+    league = MagicMock()
+    league.members_start_at_zero = False
+    league_result = MagicMock()
+    league_result.scalar_one_or_none.return_value = league
+
+    members_result = MagicMock()
+    members_result.scalars.return_value.all.return_value = []
+
     with patch(
         "app.services.league_progress_service.get_league_rankings",
         new=AsyncMock(return_value=[(1, "alice", 150, 2), (2, "bob", 50, 0)]),
@@ -66,6 +74,10 @@ async def test_build_league_progress_cumulative_points():
             nonlocal call_count
             call_count += 1
             if call_count == 1:
+                return league_result
+            if call_count == 2:
+                return members_result
+            if call_count == 3:
                 return games_result
             return predictions_result
 

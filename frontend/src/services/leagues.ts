@@ -49,6 +49,7 @@ export interface LeagueDetail {
   description?: string | null
   is_private: boolean
   is_join_locked: boolean
+  members_start_at_zero: boolean
   created_at: string
   created_by: number
   member_count: number
@@ -93,6 +94,7 @@ export interface CreateLeaguePayload {
   description?: string
   is_private: boolean
   password?: string
+  members_start_at_zero?: boolean
 }
 
 export interface CreateLeagueResponse extends LeagueSummary {
