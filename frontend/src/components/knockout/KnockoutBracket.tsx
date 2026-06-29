@@ -31,12 +31,12 @@ export const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
     <div className="w-full">
       <div className="mb-4">
         <h2 className="text-2xl font-bold text-neutral-DEFAULT">Knockout Stage</h2>
-        <p className="mt-1 text-sm text-neutral-DEFAULT/70">
-          {admin
-            ? 'Record full-time scores and select which team advances (including after extra time or penalties).'
-            : 'FIFA World Cup 2026 — bracket updates as group standings and knockout results are confirmed.'}
-        </p>
-        {data?.thirdPlaceCombinationKey && (
+        {admin && (
+          <p className="mt-1 text-sm text-neutral-DEFAULT/70">
+            Record full-time scores and select which team advances (including after extra time or penalties).
+          </p>
+        )}
+        {admin && data?.thirdPlaceCombinationKey && (
           <p className="mt-1 text-xs text-neutral-DEFAULT/55">
             Third-place combination: {data.thirdPlaceCombinationKey}
           </p>
