@@ -374,7 +374,13 @@ async def get_league_member_predictions(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Return a league member's predictions for other members of the same league."""
+    """Return the current user's predictions within a league."""
+    if user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only view your own predictions",
+        )
+
     league = await _get_league_or_404(db, league_id)
     await _require_league_member(db, league.id, current_user.id)
 

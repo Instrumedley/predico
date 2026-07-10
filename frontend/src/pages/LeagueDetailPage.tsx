@@ -3,12 +3,11 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { NavBar } from '@/components/layout'
-import { JoinLeagueModal, LeagueMemberPredictionsModal, LeagueProgressChartModal, LeagueProgressChartPreview } from '@/components/leagues'
+import { JoinLeagueModal, LeagueProgressChartModal, LeagueProgressChartPreview } from '@/components/leagues'
 import type { ProgressViewMode } from '@/components/leagues/leagueProgressViews'
 import {
   acceptLeagueInvite,
   getLeagueDetail,
-  getLeagueMemberPredictions,
   getLeagueProgress,
   inviteToLeague,
   joinLeague,
@@ -36,8 +35,6 @@ export const LeagueDetailPage: React.FC = () => {
   const [joinError, setJoinError] = useState('')
   const [inviteInput, setInviteInput] = useState('')
   const [inviteError, setInviteError] = useState('')
-  const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null)
-  const [selectedMemberName, setSelectedMemberName] = useState('')
   const [progressOpen, setProgressOpen] = useState(false)
   const [progressViewMode, setProgressViewMode] = useState<ProgressViewMode>('chart')
 
@@ -53,16 +50,6 @@ export const LeagueDetailPage: React.FC = () => {
     queryKey: ['leagueDetail', leaguePublicId],
     queryFn: () => getLeagueDetail(leaguePublicId),
     enabled: Boolean(leaguePublicId),
-  })
-
-  const {
-    data: memberPredictions,
-    isLoading: memberPredictionsLoading,
-    error: memberPredictionsError,
-  } = useQuery({
-    queryKey: ['leagueMemberPredictions', leaguePublicId, selectedMemberId],
-    queryFn: () => getLeagueMemberPredictions(leaguePublicId, selectedMemberId!),
-    enabled: Boolean(leaguePublicId && selectedMemberId !== null),
   })
 
   const {
@@ -198,16 +185,6 @@ export const LeagueDetailPage: React.FC = () => {
     inviteMutation.mutate(parsedEmails)
   }
 
-  const handleMemberClick = (userId: number, username: string) => {
-    setSelectedMemberId(userId)
-    setSelectedMemberName(username)
-  }
-
-  const handleCloseMemberPredictions = () => {
-    setSelectedMemberId(null)
-    setSelectedMemberName('')
-  }
-
   const handleRemoveMember = (userId: number, username: string) => {
     if (
       !window.confirm(
@@ -309,9 +286,8 @@ export const LeagueDetailPage: React.FC = () => {
                 <div className="px-4 py-3 border-b border-neutral-DEFAULT/10 bg-neutral-light">
                   <h2 className="text-sm font-semibold text-neutral-DEFAULT">League ranking</h2>
                   <p className="mt-1 text-xs text-neutral-DEFAULT/60">
-                    Click a player to view their predictions.
                     {league.members_start_at_zero &&
-                      ' Scores only count points earned after each member joined this league.'}
+                      'Scores only count points earned after each member joined this league.'}
                     {league.is_creator && ' As the creator, you can remove members from this list.'}
                   </p>
                 </div>
@@ -351,18 +327,9 @@ export const LeagueDetailPage: React.FC = () => {
                         return (
                           <tr
                             key={entry.user_id}
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => handleMemberClick(entry.user_id, entry.username)}
-                            onKeyDown={(event) => {
-                              if (event.key === 'Enter' || event.key === ' ') {
-                                event.preventDefault()
-                                handleMemberClick(entry.user_id, entry.username)
-                              }
-                            }}
-                            className={`cursor-pointer transition-colors hover:bg-neutral-light/80 focus:outline-none focus:bg-neutral-light/80 ${
+                            className={`${
                               showRankSeparator ? 'border-t border-neutral-DEFAULT/20' : ''
-                            } ${isCurrentUser ? 'bg-primary-medium/10 hover:bg-primary-medium/15' : ''}`}
+                            } ${isCurrentUser ? 'bg-primary-medium/10' : ''}`}
                           >
                             <td className="px-4 py-3 text-sm text-neutral-DEFAULT">{entry.rank}</td>
                             <td className="px-4 py-3 text-sm text-neutral-DEFAULT">
@@ -391,10 +358,7 @@ export const LeagueDetailPage: React.FC = () => {
                                 ) : (
                                   <button
                                     type="button"
-                                    onClick={(event) => {
-                                      event.stopPropagation()
-                                      handleRemoveMember(entry.user_id, entry.username)
-                                    }}
+                                    onClick={() => handleRemoveMember(entry.user_id, entry.username)}
                                     disabled={leagueSettingsPending}
                                     className="text-xs font-medium text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
                                   >
@@ -547,20 +511,6 @@ export const LeagueDetailPage: React.FC = () => {
           onSubmit={(password) => joinMutation.mutate(password)}
         />
       )}
-
-      <LeagueMemberPredictionsModal
-        isOpen={selectedMemberId !== null}
-        isLoading={memberPredictionsLoading}
-        username={selectedMemberName}
-        error={
-          memberPredictionsError
-            ? (memberPredictionsError as any).response?.data?.detail ||
-              'Failed to load predictions.'
-            : undefined
-        }
-        data={memberPredictions}
-        onClose={handleCloseMemberPredictions}
-      />
 
       <LeagueProgressChartModal
         isOpen={progressOpen}
